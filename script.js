@@ -24,7 +24,10 @@ class BookmarkletApp {
 	initializeComponents() {
 		// Initialize core components
 		this.validationEngine = new ValidationEngine();
-		this.bookmarkletGenerator = new BookmarkletGenerator();
+		this.bookmarkletGenerator = new BookmarkletGenerator({
+			legacySupport: false,
+			targetBrowser: 'modern'
+		});
 
 		// Initialize UI components
 		this.codeEditor = new CodeEditor('code-editor');
@@ -101,6 +104,49 @@ class BookmarkletApp {
 	showPlaceholder() {
 		this.outputDisplay.showPlaceholder();
 		this.clearErrors();
+	}
+
+	/**
+	 * Toggles legacy browser support mode
+	 * @param {boolean} enabled - Whether to enable legacy support
+	 */
+	setLegacySupport(enabled) {
+		this.bookmarkletGenerator.updateOptions({ legacySupport: enabled });
+
+		// Regenerate current bookmarklet if there's code
+		const code = this.codeEditor.getValue();
+		if (code.trim()) {
+			this.generateBookmarklet(code);
+		}
+
+		console.log(`Legacy support ${enabled ? 'enabled' : 'disabled'}`);
+	}
+
+	/**
+	 * Sets the target browser compatibility level
+	 * @param {string} target - 'legacy', 'safe', or 'modern'
+	 */
+	setTargetBrowser(target) {
+		this.bookmarkletGenerator.updateOptions({ targetBrowser: target });
+
+		// Regenerate current bookmarklet if there's code
+		const code = this.codeEditor.getValue();
+		if (code.trim()) {
+			this.generateBookmarklet(code);
+		}
+
+		console.log(`Target browser set to: ${target}`);
+	}
+
+	/**
+	 * Gets current generator configuration
+	 * @returns {Object} - Current configuration options
+	 */
+	getGeneratorConfig() {
+		return {
+			...this.bookmarkletGenerator.options,
+			effectiveLimits: this.bookmarkletGenerator.effectiveLimits
+		};
 	}
 }
 
@@ -356,11 +402,103 @@ class ValidationEngine {
 }
 
 class BookmarkletGenerator {
+	constructor(options = {}) {
+		// Browser-specific length limits for bookmarklets
+		this.LENGTH_LIMITS = {
+			// Legacy browser support (IE, old mobile browsers)
+			LEGACY_SAFE: 1000,     // Ultra-safe for ancient browsers
+			LEGACY_MAX: 2083,      // Internet Explorer absolute limit
+
+			// Modern browser support (Chrome, Firefox, Safari, Edge)
+			MODERN_WARNING: 4000,  // Start showing warnings for modern browsers
+			MODERN_SAFE: 8192,     // Safe limit for modern browsers
+			MODERN_MAX: 65536,     // Theoretical limit (but impractical)
+
+			// Display thresholds
+			WARNING_THRESHOLD: 1500 // When to start showing length warnings
+		};
+
+		// Configuration options
+		this.options = {
+			legacySupport: options.legacySupport || false,
+			targetBrowser: options.targetBrowser || 'modern', // 'legacy', 'modern'
+			...options
+		};
+
+		// Set effective limits based on configuration
+		this.effectiveLimits = this.calculateEffectiveLimits();
+	}
+
+	/**
+	 * Calculates effective length limits based on configuration
+	 * @returns {Object} - Effective limits for current configuration
+	 */
+	calculateEffectiveLimits() {
+		if (this.options.legacySupport || this.options.targetBrowser === 'legacy') {
+			return {
+				WARNING: 1200,
+				SAFE: 1800,
+				MAX: this.LENGTH_LIMITS.LEGACY,
+				TARGET: 'legacy browsers (IE, old Safari)'
+			};
+		}
+
+		if (this.options.targetBrowser === 'safe') {
+			return {
+				WARNING: this.LENGTH_LIMITS.WARNING,
+				SAFE: this.LENGTH_LIMITS.SAFE,
+				MAX: this.LENGTH_LIMITS.SAFE + 500,
+				TARGET: 'maximum compatibility'
+			};
+		}
+
+		// Modern browsers (default)
+		return {
+			WARNING: this.LENGTH_LIMITS.WARNING,
+			SAFE: this.LENGTH_LIMITS.SAFE,
+			MAX: this.LENGTH_LIMITS.MODERN,
+			TARGET: 'modern browsers'
+		};
+	}
+
+	/**
+	 * Updates the generator configuration
+	 * @param {Object} newOptions - New configuration options
+	 */
+	updateOptions(newOptions) {
+		this.options = { ...this.options, ...newOptions };
+		this.effectiveLimits = this.calculateEffectiveLimits();
+	}
+
+	/**
+	 * Sets whether to enforce legacy browser compatibility
+	 * @param {boolean} enabled - Whether to enable legacy support mode
+	 */
+	setLegacySupport(enabled) {
+		this.legacySupport = Boolean(enabled);
+	}
+
+	/**
+	 * Gets the current legacy support setting
+	 * @returns {boolean} - Whether legacy support is enabled
+	 */
+	isLegacySupportEnabled() {
+		return this.legacySupport;
+	}
+
+	/**
+	 * Gets the effective length limit based on current settings
+	 * @returns {number} - Maximum allowed length
+	 */
+	getEffectiveLengthLimit() {
+		return this.legacySupport ? this.LENGTH_LIMITS.IE_LEGACY : this.LENGTH_LIMITS.MODERN;
+	}
+
 	/**
 	 * Generates a bookmarklet object from JavaScript code and name
 	 * @param {string} code - JavaScript code to convert
 	 * @param {string} name - Name for the bookmarklet
-	 * @returns {Object} - Bookmarklet object with name, code, url, and isValid properties
+	 * @returns {Object} - Bookmarklet object with name, code, url, isValid, and length info
 	 */
 	generate(code, name) {
 		if (!code || typeof code !== 'string') {
@@ -369,7 +507,9 @@ class BookmarkletGenerator {
 				code: '',
 				url: '',
 				isValid: false,
-				error: 'No code provided'
+				error: 'No code provided',
+				length: 0,
+				lengthStatus: 'empty'
 			};
 		}
 
@@ -381,12 +521,18 @@ class BookmarkletGenerator {
 			// Create the bookmarklet URL with proper formatting
 			const bookmarkletUrl = this.createBookmarkletUrl(code);
 
+			// Validate length and get status
+			const lengthInfo = this.validateLength(bookmarkletUrl);
+
 			return {
 				name: name.trim(),
 				code: code,
 				url: bookmarkletUrl,
-				isValid: true,
-				error: null
+				isValid: lengthInfo.isValid,
+				error: lengthInfo.error,
+				length: lengthInfo.length,
+				lengthStatus: lengthInfo.status,
+				lengthWarning: lengthInfo.warning
 			};
 		} catch (error) {
 			return {
@@ -394,9 +540,121 @@ class BookmarkletGenerator {
 				code: code,
 				url: '',
 				isValid: false,
-				error: error.message
+				error: error.message,
+				length: 0,
+				lengthStatus: 'error'
 			};
 		}
+	}
+
+	/**
+	 * Validates the length of a bookmarklet URL against browser limits
+	 * @param {string} url - Complete bookmarklet URL to validate
+	 * @returns {Object} - Length validation result with status and warnings
+	 */
+	validateLength(url) {
+		const length = url.length;
+		const limits = this.effectiveLimits;
+
+		if (length === 0) {
+			return {
+				length: 0,
+				status: 'empty',
+				isValid: false,
+				error: 'Empty bookmarklet URL',
+				warning: null,
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.MAX) {
+			return {
+				length,
+				status: 'too_long',
+				isValid: false,
+				error: `Bookmarklet is too long (${length} characters). Maximum length for ${limits.TARGET} is ${limits.MAX} characters.`,
+				warning: null,
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.SAFE) {
+			return {
+				length,
+				status: 'long',
+				isValid: true,
+				error: null,
+				warning: `Bookmarklet is ${length} characters long. May not work reliably with ${limits.TARGET}. Consider shortening for better compatibility.`,
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.WARNING) {
+			return {
+				length,
+				status: 'warning',
+				isValid: true,
+				error: null,
+				warning: `Bookmarklet is ${length} characters long. Still within safe limits for ${limits.TARGET} but consider keeping it shorter.`,
+				target: limits.TARGET
+			};
+		}
+
+		return {
+			length,
+			status: 'good',
+			isValid: true,
+			error: null,
+			warning: null,
+			target: limits.TARGET
+		};
+	}
+
+	/**
+	 * Gets length status information for display purposes
+	 * @param {number} length - Length of the bookmarklet URL
+	 * @returns {Object} - Status information with color and message
+	 */
+	getLengthStatusInfo(length) {
+		const limits = this.effectiveLimits;
+
+		if (length === 0) {
+			return {
+				color: 'gray',
+				message: 'No bookmarklet generated',
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.MAX) {
+			return {
+				color: 'red',
+				message: `Too long for ${limits.TARGET}`,
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.SAFE) {
+			return {
+				color: 'orange',
+				message: `Long - may not work with ${limits.TARGET}`,
+				target: limits.TARGET
+			};
+		}
+
+		if (length > limits.WARNING) {
+			return {
+				color: 'yellow',
+				message: 'Getting long - consider shortening',
+				target: limits.TARGET
+			};
+		}
+
+		return {
+			color: 'green',
+			message: `Good length for ${limits.TARGET}`,
+			target: limits.TARGET
+		};
 	}
 
 	/**
@@ -549,6 +807,110 @@ class BookmarkletGenerator {
 			console.error('Error decoding bookmarklet URL:', error);
 			return '';
 		}
+	}
+
+	/**
+	 * Suggests optimizations to reduce bookmarklet length
+	 * @param {string} code - JavaScript code to analyze
+	 * @returns {Object} - Optimization suggestions and estimated savings
+	 */
+	suggestOptimizations(code) {
+		if (!code || typeof code !== 'string') {
+			return { suggestions: [], estimatedSavings: 0 };
+		}
+
+		const suggestions = [];
+		let estimatedSavings = 0;
+
+		// Check for common optimization opportunities
+
+		// 1. Long variable names
+		const longVarMatches = code.match(/\b[a-zA-Z_$][a-zA-Z0-9_$]{8,}\b/g);
+		if (longVarMatches && longVarMatches.length > 0) {
+			const uniqueLongVars = [...new Set(longVarMatches)];
+			const savings = uniqueLongVars.reduce((total, varName) => {
+				const occurrences = (code.match(new RegExp(`\\b${varName}\\b`, 'g')) || []).length;
+				return total + (varName.length - 1) * occurrences; // Assume shortening to 1 char
+			}, 0);
+
+			suggestions.push({
+				type: 'variable_names',
+				message: `Shorten ${uniqueLongVars.length} long variable name(s)`,
+				details: `Variables like: ${uniqueLongVars.slice(0, 3).join(', ')}${uniqueLongVars.length > 3 ? '...' : ''}`,
+				savings: savings
+			});
+			estimatedSavings += savings;
+		}
+
+		// 2. Unnecessary whitespace
+		const whitespaceCount = (code.match(/\s+/g) || []).join('').length;
+		const minifiedWhitespace = code.replace(/\s+/g, ' ').replace(/\s*([{}();,])\s*/g, '$1').length;
+		const whitespaceSavings = code.length - minifiedWhitespace;
+
+		if (whitespaceSavings > 10) {
+			suggestions.push({
+				type: 'whitespace',
+				message: 'Remove unnecessary whitespace',
+				details: 'Minify spacing around operators and brackets',
+				savings: whitespaceSavings
+			});
+			estimatedSavings += whitespaceSavings;
+		}
+
+		// 3. Repeated strings
+		const stringMatches = code.match(/"[^"]{4,}"|'[^']{4,}'/g);
+		if (stringMatches) {
+			const stringCounts = {};
+			stringMatches.forEach(str => {
+				stringCounts[str] = (stringCounts[str] || 0) + 1;
+			});
+
+			const repeatedStrings = Object.entries(stringCounts).filter(([str, count]) => count > 1);
+			if (repeatedStrings.length > 0) {
+				const savings = repeatedStrings.reduce((total, [str, count]) => {
+					return total + (str.length - 1) * (count - 1); // Save by using variable
+				}, 0);
+
+				suggestions.push({
+					type: 'repeated_strings',
+					message: `Extract ${repeatedStrings.length} repeated string(s) to variables`,
+					details: `Strings repeated: ${repeatedStrings.map(([str]) => str.substring(0, 20) + '...').join(', ')}`,
+					savings: savings
+				});
+				estimatedSavings += savings;
+			}
+		}
+
+		// 4. Long method chains
+		const chainMatches = code.match(/\.[a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*/g);
+		if (chainMatches && chainMatches.length > 0) {
+			suggestions.push({
+				type: 'method_chains',
+				message: 'Consider breaking long method chains',
+				details: 'Store intermediate results in short variables',
+				savings: Math.min(50, chainMatches.length * 10) // Estimated
+			});
+			estimatedSavings += Math.min(50, chainMatches.length * 10);
+		}
+
+		// 5. Console.log statements (often not needed in bookmarklets)
+		const consoleMatches = code.match(/console\.(log|warn|error|info)\([^)]*\);?/g);
+		if (consoleMatches && consoleMatches.length > 0) {
+			const savings = consoleMatches.reduce((total, match) => total + match.length, 0);
+			suggestions.push({
+				type: 'console_statements',
+				message: `Remove ${consoleMatches.length} console statement(s)`,
+				details: 'Console statements are often unnecessary in bookmarklets',
+				savings: savings
+			});
+			estimatedSavings += savings;
+		}
+
+		return {
+			suggestions: suggestions.sort((a, b) => b.savings - a.savings), // Sort by potential savings
+			estimatedSavings,
+			currentLength: this.createBookmarkletUrl(code).length
+		};
 	}
 }
 

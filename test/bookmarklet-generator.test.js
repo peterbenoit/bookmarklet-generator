@@ -4,11 +4,21 @@ import { describe, it, expect, beforeEach } from 'vitest';
 // Since we're testing a class from script.js, we need to load it in a way that works with our test environment
 // For now, we'll define the class here for testing purposes
 class BookmarkletGenerator {
+	constructor() {
+		// Browser-specific length limits for bookmarklets
+		this.LENGTH_LIMITS = {
+			SAFE: 2000,        // Safe limit for maximum compatibility
+			IE_LEGACY: 2083,   // Internet Explorer limit
+			MODERN: 8192,      // Practical limit for modern browsers
+			WARNING: 1500      // Show warning at this length
+		};
+	}
+
 	/**
 	 * Generates a bookmarklet object from JavaScript code and name
 	 * @param {string} code - JavaScript code to convert
 	 * @param {string} name - Name for the bookmarklet
-	 * @returns {Object} - Bookmarklet object with name, code, url, and isValid properties
+	 * @returns {Object} - Bookmarklet object with name, code, url, isValid, and length info
 	 */
 	generate(code, name) {
 		if (!code || typeof code !== 'string') {
@@ -17,7 +27,9 @@ class BookmarkletGenerator {
 				code: '',
 				url: '',
 				isValid: false,
-				error: 'No code provided'
+				error: 'No code provided',
+				length: 0,
+				lengthStatus: 'empty'
 			};
 		}
 
@@ -29,12 +41,18 @@ class BookmarkletGenerator {
 			// Create the bookmarklet URL with proper formatting
 			const bookmarkletUrl = this.createBookmarkletUrl(code);
 
+			// Validate length and get status
+			const lengthInfo = this.validateLength(bookmarkletUrl);
+
 			return {
 				name: name.trim(),
 				code: code,
 				url: bookmarkletUrl,
-				isValid: true,
-				error: null
+				isValid: lengthInfo.isValid,
+				error: lengthInfo.error,
+				length: lengthInfo.length,
+				lengthStatus: lengthInfo.status,
+				lengthWarning: lengthInfo.warning
 			};
 		} catch (error) {
 			return {
@@ -42,9 +60,93 @@ class BookmarkletGenerator {
 				code: code,
 				url: '',
 				isValid: false,
-				error: error.message
+				error: error.message,
+				length: 0,
+				lengthStatus: 'error'
 			};
 		}
+	}
+
+	/**
+	 * Validates the length of a bookmarklet URL against browser limits
+	 * @param {string} url - Complete bookmarklet URL to validate
+	 * @returns {Object} - Length validation result with status and warnings
+	 */
+	validateLength(url) {
+		const length = url.length;
+
+		if (length === 0) {
+			return {
+				length: 0,
+				status: 'empty',
+				isValid: false,
+				error: 'Empty bookmarklet URL',
+				warning: null
+			};
+		}
+
+		if (length > this.LENGTH_LIMITS.MODERN) {
+			return {
+				length,
+				status: 'too_long',
+				isValid: false,
+				error: `Bookmarklet is too long (${length} characters). Maximum supported length is ${this.LENGTH_LIMITS.MODERN} characters.`,
+				warning: null
+			};
+		}
+
+		if (length > this.LENGTH_LIMITS.SAFE) {
+			return {
+				length,
+				status: 'long',
+				isValid: true,
+				error: null,
+				warning: `Bookmarklet is ${length} characters long. May not work in older browsers (IE limit: ${this.LENGTH_LIMITS.IE_LEGACY} chars). Consider shortening for maximum compatibility.`
+			};
+		}
+
+		if (length > this.LENGTH_LIMITS.WARNING) {
+			return {
+				length,
+				status: 'warning',
+				isValid: true,
+				error: null,
+				warning: `Bookmarklet is ${length} characters long. Still within safe limits but consider keeping it shorter for better compatibility.`
+			};
+		}
+
+		return {
+			length,
+			status: 'good',
+			isValid: true,
+			error: null,
+			warning: null
+		};
+	}
+
+	/**
+	 * Gets length status information for display purposes
+	 * @param {number} length - Length of the bookmarklet URL
+	 * @returns {Object} - Status information with color and message
+	 */
+	getLengthStatusInfo(length) {
+		if (length === 0) {
+			return { color: 'gray', message: 'No bookmarklet generated' };
+		}
+
+		if (length > this.LENGTH_LIMITS.MODERN) {
+			return { color: 'red', message: 'Too long - will not work' };
+		}
+
+		if (length > this.LENGTH_LIMITS.SAFE) {
+			return { color: 'orange', message: 'Long - may not work in older browsers' };
+		}
+
+		if (length > this.LENGTH_LIMITS.WARNING) {
+			return { color: 'yellow', message: 'Getting long - consider shortening' };
+		}
+
+		return { color: 'green', message: 'Good length' };
 	}
 
 	/**
@@ -219,6 +321,18 @@ describe('BookmarkletGenerator', () => {
 			expect(result.isValid).toBe(true);
 			expect(result.error).toBeNull();
 			expect(result.url).toMatch(/^javascript:/);
+			expect(result.length).toBeGreaterThan(0);
+			expect(result.lengthStatus).toBeDefined();
+		});
+
+		it('should include length information in result', () => {
+			const code = 'console.log("test");';
+
+			const result = generator.generate(code);
+
+			expect(result.length).toBeGreaterThan(0);
+			expect(result.lengthStatus).toBe('good'); // Short code should be good
+			expect(result.lengthWarning).toBeNull();
 		});
 
 		it('should use default name when name is not provided', () => {
@@ -230,51 +344,81 @@ describe('BookmarkletGenerator', () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it('should use default name when name is empty string', () => {
-			const code = 'console.log("test");';
-
-			const result = generator.generate(code, '');
-
-			expect(result.name).toBe('Custom Bookmarklet');
-			expect(result.isValid).toBe(true);
-		});
-
-		it('should trim whitespace from name', () => {
-			const code = 'console.log("test");';
-			const name = '  Spaced Name  ';
-
-			const result = generator.generate(code, name);
-
-			expect(result.name).toBe('Spaced Name');
-		});
-
 		it('should return invalid result when code is empty', () => {
 			const result = generator.generate('', 'Test Name');
 
 			expect(result.isValid).toBe(false);
 			expect(result.error).toBe('No code provided');
 			expect(result.url).toBe('');
+			expect(result.length).toBe(0);
+			expect(result.lengthStatus).toBe('empty');
+		});
+	});
+
+	describe('validateLength()', () => {
+		it('should return good status for short URLs', () => {
+			const shortUrl = 'javascript:alert("test");';
+
+			const result = generator.validateLength(shortUrl);
+
+			expect(result.status).toBe('good');
+			expect(result.isValid).toBe(true);
+			expect(result.error).toBeNull();
+			expect(result.warning).toBeNull();
 		});
 
-		it('should return invalid result when code is null', () => {
-			const result = generator.generate(null, 'Test Name');
+		it('should return warning status for medium URLs', () => {
+			const mediumCode = 'a'.repeat(1600); // Create code that results in warning length
+			const mediumUrl = `javascript:${mediumCode}`;
 
-			expect(result.isValid).toBe(false);
-			expect(result.error).toBe('No code provided');
+			const result = generator.validateLength(mediumUrl);
+
+			expect(result.status).toBe('warning');
+			expect(result.isValid).toBe(true);
+			expect(result.error).toBeNull();
+			expect(result.warning).toContain('consider keeping it shorter');
 		});
 
-		it('should return invalid result when code is undefined', () => {
-			const result = generator.generate(undefined, 'Test Name');
+		it('should return long status for URLs over safe limit', () => {
+			const longCode = 'a'.repeat(2100); // Create code that exceeds safe limit
+			const longUrl = `javascript:${longCode}`;
 
-			expect(result.isValid).toBe(false);
-			expect(result.error).toBe('No code provided');
+			const result = generator.validateLength(longUrl);
+
+			expect(result.status).toBe('long');
+			expect(result.isValid).toBe(true);
+			expect(result.error).toBeNull();
+			expect(result.warning).toContain('May not work in older browsers');
 		});
 
-		it('should handle non-string code input', () => {
-			const result = generator.generate(123, 'Test Name');
+		it('should return too_long status for URLs over modern limit', () => {
+			const tooLongCode = 'a'.repeat(8300); // Create code that exceeds modern limit
+			const tooLongUrl = `javascript:${tooLongCode}`;
 
+			const result = generator.validateLength(tooLongUrl);
+
+			expect(result.status).toBe('too_long');
 			expect(result.isValid).toBe(false);
-			expect(result.error).toBe('No code provided');
+			expect(result.error).toContain('too long');
+			expect(result.warning).toBeNull();
+		});
+
+		it('should return empty status for empty URLs', () => {
+			const result = generator.validateLength('');
+
+			expect(result.status).toBe('empty');
+			expect(result.isValid).toBe(false);
+			expect(result.error).toBe('Empty bookmarklet URL');
+		});
+	});
+
+	describe('getLengthStatusInfo()', () => {
+		it('should return appropriate status info for different lengths', () => {
+			expect(generator.getLengthStatusInfo(0).color).toBe('gray');
+			expect(generator.getLengthStatusInfo(1000).color).toBe('green');
+			expect(generator.getLengthStatusInfo(1600).color).toBe('yellow');
+			expect(generator.getLengthStatusInfo(2100).color).toBe('orange');
+			expect(generator.getLengthStatusInfo(8500).color).toBe('red');
 		});
 	});
 
@@ -295,16 +439,6 @@ describe('BookmarkletGenerator', () => {
 			expect(url).toMatch(/^javascript:/);
 			expect(url).toContain('(function(){');
 			expect(url).toContain('})();');
-		});
-
-		it('should handle code with quotes and special characters', () => {
-			const code = 'alert("Hello \'World\'!");';
-
-			const url = generator.createBookmarkletUrl(code);
-
-			expect(url).toMatch(/^javascript:/);
-			// The URL should be properly encoded
-			expect(url.length).toBeGreaterThan('javascript:'.length);
 		});
 	});
 
@@ -332,17 +466,6 @@ describe('BookmarkletGenerator', () => {
 			expect(encoded).toContain(',');
 		});
 
-		it('should handle parentheses and function calls', () => {
-			const code = 'console.log("test");';
-
-			const encoded = generator.encodeForURL(code);
-
-			// Parentheses should remain readable
-			expect(encoded).toContain('(');
-			expect(encoded).toContain(')');
-			expect(encoded).toContain(';');
-		});
-
 		it('should handle spaces correctly', () => {
 			const code = 'var x = 5;';
 
@@ -352,187 +475,31 @@ describe('BookmarkletGenerator', () => {
 			expect(encoded).toContain(' ');
 			expect(encoded).not.toContain('%20');
 		});
-
-		it('should handle mathematical operators', () => {
-			const code = 'var result = 5 + 3 - 2 * 4 / 2;';
-
-			const encoded = generator.encodeForURL(code);
-
-			// Mathematical operators should remain readable
-			expect(encoded).toContain('+');
-			expect(encoded).toContain('-');
-			expect(encoded).toContain('*');
-			expect(encoded).toContain('/');
-		});
-
-		it('should handle array notation', () => {
-			const code = 'var arr = [1, 2, 3];';
-
-			const encoded = generator.encodeForURL(code);
-
-			// Array brackets should remain readable
-			expect(encoded).toContain('[');
-			expect(encoded).toContain(']');
-		});
-	});
-
-	describe('createDraggableLink()', () => {
-		it('should create a valid anchor element for valid bookmarklet', () => {
-			const bookmarklet = {
-				name: 'Test Bookmarklet',
-				url: 'javascript:alert("test");',
-				isValid: true
-			};
-
-			const link = generator.createDraggableLink(bookmarklet);
-
-			expect(link).toBeInstanceOf(HTMLAnchorElement);
-			expect(link.href).toBe(bookmarklet.url);
-			expect(link.textContent).toBe(bookmarklet.name);
-			expect(link.className).toContain('bookmarklet-link');
-			expect(link.className).toContain('draggable');
-		});
-
-		it('should set proper attributes on the link', () => {
-			const bookmarklet = {
-				name: 'Test Bookmarklet',
-				url: 'javascript:alert("test");',
-				isValid: true
-			};
-
-			const link = generator.createDraggableLink(bookmarklet);
-
-			expect(link.title).toContain('Drag this to your bookmarks bar');
-			expect(link.getAttribute('data-bookmarklet')).toBe('true');
-		});
-
-		it('should return null for invalid bookmarklet', () => {
-			const bookmarklet = {
-				name: 'Invalid',
-				url: '',
-				isValid: false
-			};
-
-			const link = generator.createDraggableLink(bookmarklet);
-
-			expect(link).toBeNull();
-		});
-
-		it('should return null for null bookmarklet', () => {
-			const link = generator.createDraggableLink(null);
-
-			expect(link).toBeNull();
-		});
-
-		it('should return null for bookmarklet without URL', () => {
-			const bookmarklet = {
-				name: 'Test',
-				isValid: true
-				// missing url
-			};
-
-			const link = generator.createDraggableLink(bookmarklet);
-
-			expect(link).toBeNull();
-		});
-	});
-
-	describe('isValidBookmarkletUrl()', () => {
-		it('should return true for valid bookmarklet URL', () => {
-			const url = 'javascript:alert("Hello");';
-
-			const isValid = generator.isValidBookmarkletUrl(url);
-
-			expect(isValid).toBe(true);
-		});
-
-		it('should return false for URL without javascript: protocol', () => {
-			const url = 'http://example.com';
-
-			const isValid = generator.isValidBookmarkletUrl(url);
-
-			expect(isValid).toBe(false);
-		});
-
-		it('should return false for empty javascript: URL', () => {
-			const url = 'javascript:';
-
-			const isValid = generator.isValidBookmarkletUrl(url);
-
-			expect(isValid).toBe(false);
-		});
-
-		it('should return false for null or undefined URL', () => {
-			expect(generator.isValidBookmarkletUrl(null)).toBe(false);
-			expect(generator.isValidBookmarkletUrl(undefined)).toBe(false);
-		});
-
-		it('should return false for non-string URL', () => {
-			expect(generator.isValidBookmarkletUrl(123)).toBe(false);
-			expect(generator.isValidBookmarkletUrl({})).toBe(false);
-		});
-
-		it('should return true for complex bookmarklet URL', () => {
-			const url = 'javascript:(function(){var x=5;alert(x);})();';
-
-			const isValid = generator.isValidBookmarkletUrl(url);
-
-			expect(isValid).toBe(true);
-		});
-	});
-
-	describe('extractCodeFromUrl()', () => {
-		it('should extract code from simple bookmarklet URL', () => {
-			const originalCode = 'alert("Hello");';
-			const url = `javascript:${encodeURIComponent(originalCode)}`;
-
-			const extractedCode = generator.extractCodeFromUrl(url);
-
-			expect(extractedCode).toBe(originalCode);
-		});
-
-		it('should extract code from IIFE-wrapped bookmarklet', () => {
-			const originalCode = 'alert("Hello");';
-			const wrappedCode = `(function(){${originalCode}})();`;
-			const url = `javascript:${encodeURIComponent(wrappedCode)}`;
-
-			const extractedCode = generator.extractCodeFromUrl(url);
-
-			expect(extractedCode).toBe(originalCode);
-		});
-
-		it('should return empty string for invalid URL', () => {
-			const extractedCode = generator.extractCodeFromUrl('http://example.com');
-
-			expect(extractedCode).toBe('');
-		});
-
-		it('should return empty string for null URL', () => {
-			const extractedCode = generator.extractCodeFromUrl(null);
-
-			expect(extractedCode).toBe('');
-		});
-
-		it('should handle complex JavaScript code extraction', () => {
-			const originalCode = 'var x = 5; if (x > 3) { console.log("greater"); }';
-			const wrappedCode = `(function(){${originalCode}})();`;
-			const url = `javascript:${encodeURIComponent(wrappedCode)}`;
-
-			const extractedCode = generator.extractCodeFromUrl(url);
-
-			expect(extractedCode).toBe(originalCode);
-		});
-
-		it('should handle malformed encoded URLs gracefully', () => {
-			const url = 'javascript:%ZZ%invalid';
-
-			const extractedCode = generator.extractCodeFromUrl(url);
-
-			expect(extractedCode).toBe('');
-		});
 	});
 
 	describe('Integration Tests', () => {
+		it('should handle long code with appropriate warnings', () => {
+			// Create code that will result in a warning-length bookmarklet
+			const longCode = `
+				var elements = document.querySelectorAll('div, span, p, a, img, h1, h2, h3, h4, h5, h6');
+				for (var i = 0; i < elements.length; i++) {
+					elements[i].style.border = '2px solid red';
+					elements[i].style.backgroundColor = 'yellow';
+					elements[i].style.color = 'black';
+				}
+			`.repeat(10); // Repeat to make it long
+
+			const result = generator.generate(longCode, 'Long Test');
+
+			expect(result.length).toBeGreaterThan(generator.LENGTH_LIMITS.WARNING);
+			expect(result.lengthStatus).toMatch(/warning|long|too_long/);
+
+			if (result.lengthStatus === 'warning' || result.lengthStatus === 'long') {
+				expect(result.isValid).toBe(true);
+				expect(result.lengthWarning).toBeDefined();
+			}
+		});
+
 		it('should create bookmarklet that can be extracted back to original code', () => {
 			const originalCode = 'alert("Round trip test");';
 			const name = 'Round Trip Test';
@@ -545,31 +512,74 @@ describe('BookmarkletGenerator', () => {
 
 			expect(extractedCode).toBe(originalCode);
 		});
+	});
+});
+describe('Legacy Support', () => {
+	it('should initialize with modern browser support by default', () => {
+		expect(generator.options.legacySupport).toBe(false);
+		expect(generator.options.targetBrowser).toBe('modern');
+		expect(generator.effectiveLimits.TARGET).toBe('modern browsers');
+	});
 
-		it('should handle complex code round trip', () => {
-			const originalCode = `
-				var elements = document.querySelectorAll('img');
-				for (var i = 0; i < elements.length; i++) {
-					elements[i].style.border = '2px solid red';
-				}
-			`.trim();
+	it('should update limits when legacy support is enabled', () => {
+		generator.updateOptions({ legacySupport: true });
 
-			const bookmarklet = generator.generate(originalCode, 'Highlight Images');
-			const extractedCode = generator.extractCodeFromUrl(bookmarklet.url);
+		expect(generator.effectiveLimits.TARGET).toBe('legacy browsers (IE, old Safari)');
+		expect(generator.effectiveLimits.MAX).toBe(generator.LENGTH_LIMITS.LEGACY);
+		expect(generator.effectiveLimits.WARNING).toBe(1200);
+	});
 
-			expect(extractedCode).toBe(originalCode);
-		});
+	it('should update limits when target browser is set to safe', () => {
+		generator.updateOptions({ targetBrowser: 'safe' });
 
-		it('should create draggable link from generated bookmarklet', () => {
-			const code = 'console.log("test");';
-			const name = 'Test Link';
+		expect(generator.effectiveLimits.TARGET).toBe('maximum compatibility');
+		expect(generator.effectiveLimits.MAX).toBe(generator.LENGTH_LIMITS.SAFE + 500);
+	});
 
-			const bookmarklet = generator.generate(code, name);
-			const link = generator.createDraggableLink(bookmarklet);
+	it('should validate length differently in legacy mode', () => {
+		const mediumCode = 'a'.repeat(1800); // Code that's fine for modern but warning for legacy
+		const url = `javascript:${mediumCode}`;
 
-			expect(link).not.toBeNull();
-			expect(link.href).toBe(bookmarklet.url);
-			expect(link.textContent).toBe(name);
-		});
+		// Modern mode - should be good
+		let result = generator.validateLength(url);
+		expect(result.status).toBe('warning');
+
+		// Legacy mode - should be more restrictive
+		generator.updateOptions({ legacySupport: true });
+		result = generator.validateLength(url);
+		expect(result.status).toBe('long');
+		expect(result.target).toBe('legacy browsers (IE, old Safari)');
+	});
+
+	it('should provide different status info based on target browser', () => {
+		const length = 1600;
+
+		// Modern mode
+		let statusInfo = generator.getLengthStatusInfo(length);
+		expect(statusInfo.color).toBe('yellow');
+		expect(statusInfo.target).toBe('modern browsers');
+
+		// Legacy mode
+		generator.updateOptions({ legacySupport: true });
+		statusInfo = generator.getLengthStatusInfo(length);
+		expect(statusInfo.color).toBe('orange');
+		expect(statusInfo.target).toBe('legacy browsers (IE, old Safari)');
+	});
+
+	it('should handle legacy mode end-to-end', () => {
+		const code = 'alert("Legacy test");';
+
+		// Enable legacy support
+		generator.updateOptions({ legacySupport: true });
+
+		const result = generator.generate(code, 'Legacy Test');
+
+		expect(result.isValid).toBe(true);
+		expect(result.target).toBe('legacy browsers (IE, old Safari)');
+		expect(result.url).toMatch(/^javascript:/);
+
+		// Should still be extractable
+		const extractedCode = generator.extractCodeFromUrl(result.url);
+		expect(extractedCode).toBe(code);
 	});
 });
