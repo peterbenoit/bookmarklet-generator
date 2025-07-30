@@ -150,28 +150,524 @@ class BookmarkletApp {
 	}
 }
 
-// Placeholder classes for components (to be implemented in later tasks)
+/**
+ * CodeEditor class provides enhanced code editing functionality with syntax highlighting,
+ * error display, and real-time validation for JavaScript code input.
+ */
 class CodeEditor {
 	constructor(elementId) {
 		this.element = document.getElementById(elementId);
 		this.changeCallback = null;
+		this.debounceTimer = null;
+		this.debounceDelay = 300; // 300ms debounce as specified
+		this.currentErrors = [];
+		this.highlightOverlay = null;
+
+		if (!this.element) {
+			throw new Error(`CodeEditor: Element with id '${elementId}' not found`);
+		}
+
+		this.init();
 	}
 
+	/**
+	 * Initialize the code editor with enhanced functionality
+	 */
+	init() {
+		// Set up the editor container structure
+		this.setupEditorStructure();
+
+		// Add syntax highlighting support
+		this.setupSyntaxHighlighting();
+
+		// Set up event listeners
+		this.setupEventListeners();
+
+		// Apply initial styling
+		this.applyEditorStyling();
+	}
+
+	/**
+	 * Sets up the editor structure with overlay for highlighting
+	 */
+	setupEditorStructure() {
+		// Wrap the textarea in a container for positioning overlays
+		const container = document.createElement('div');
+		container.className = 'code-editor-container';
+
+		// Insert container before the textarea
+		this.element.parentNode.insertBefore(container, this.element);
+
+		// Move textarea into container
+		container.appendChild(this.element);
+
+		// Create highlight overlay
+		this.highlightOverlay = document.createElement('div');
+		this.highlightOverlay.className = 'code-highlight-overlay';
+		this.highlightOverlay.setAttribute('aria-hidden', 'true');
+		container.appendChild(this.highlightOverlay);
+
+		// Store reference to container
+		this.container = container;
+	}
+
+	/**
+	 * Sets up basic syntax highlighting functionality
+	 */
+	setupSyntaxHighlighting() {
+		// Add CSS class for syntax highlighting support
+		this.element.classList.add('syntax-highlighted');
+
+		// Set up highlighting update on scroll/resize
+		this.element.addEventListener('scroll', () => this.updateHighlightPosition());
+		window.addEventListener('resize', () => this.updateHighlightPosition());
+	}
+
+	/**
+	 * Sets up event listeners for the code editor
+	 */
+	setupEventListeners() {
+		// Input event with debouncing for real-time validation
+		this.element.addEventListener('input', (e) => {
+			this.handleCodeChange(e.target.value);
+			this.updateSyntaxHighlighting(e.target.value);
+		});
+
+		// Additional events for better UX
+		this.element.addEventListener('paste', (e) => {
+			// Handle paste with slight delay to get the pasted content
+			setTimeout(() => {
+				this.handleCodeChange(this.element.value);
+				this.updateSyntaxHighlighting(this.element.value);
+			}, 10);
+		});
+
+		// Handle tab key for proper indentation
+		this.element.addEventListener('keydown', (e) => {
+			this.handleKeyDown(e);
+		});
+
+		// Update highlighting position on scroll
+		this.element.addEventListener('scroll', () => {
+			this.updateHighlightPosition();
+		});
+	}
+
+	/**
+	 * Applies enhanced styling to the editor
+	 */
+	applyEditorStyling() {
+		// Add enhanced editor class
+		this.element.classList.add('enhanced-code-editor');
+
+		// Set monospace font and other code-specific styles
+		this.element.style.fontFamily = "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace";
+		this.element.style.fontSize = '14px';
+		this.element.style.lineHeight = '1.5';
+		this.element.style.tabSize = '2';
+	}
+
+	/**
+	 * Handles code changes with debouncing
+	 * @param {string} code - The current code content
+	 */
+	handleCodeChange(code) {
+		// Clear existing debounce timer
+		if (this.debounceTimer) {
+			clearTimeout(this.debounceTimer);
+		}
+
+		// Set up new debounced callback
+		this.debounceTimer = setTimeout(() => {
+			if (this.changeCallback) {
+				this.changeCallback(code);
+			}
+		}, this.debounceDelay);
+	}
+
+	/**
+	 * Handles special key combinations for better code editing
+	 * @param {KeyboardEvent} e - The keyboard event
+	 */
+	handleKeyDown(e) {
+		// Handle Tab key for indentation
+		if (e.key === 'Tab') {
+			e.preventDefault();
+
+			const start = this.element.selectionStart;
+			const end = this.element.selectionEnd;
+			const value = this.element.value;
+
+			if (e.shiftKey) {
+				// Shift+Tab: Remove indentation
+				this.handleUnindent(start, end, value);
+			} else {
+				// Tab: Add indentation
+				this.handleIndent(start, end, value);
+			}
+		}
+
+		// Handle Enter key for auto-indentation
+		else if (e.key === 'Enter') {
+			this.handleAutoIndent(e);
+		}
+	}
+
+	/**
+	 * Handles tab indentation
+	 * @param {number} start - Selection start position
+	 * @param {number} end - Selection end position
+	 * @param {string} value - Current textarea value
+	 */
+	handleIndent(start, end, value) {
+		const indent = '  '; // 2 spaces
+
+		if (start === end) {
+			// No selection: insert tab at cursor
+			this.element.value = value.substring(0, start) + indent + value.substring(end);
+			this.element.selectionStart = this.element.selectionEnd = start + indent.length;
+		} else {
+			// Selection: indent all selected lines
+			const beforeSelection = value.substring(0, start);
+			const selectedText = value.substring(start, end);
+			const afterSelection = value.substring(end);
+
+			const indentedText = selectedText.split('\n').map(line => indent + line).join('\n');
+
+			this.element.value = beforeSelection + indentedText + afterSelection;
+			this.element.selectionStart = start;
+			this.element.selectionEnd = start + indentedText.length;
+		}
+
+		// Trigger change event
+		this.element.dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	/**
+	 * Handles shift+tab unindentation
+	 * @param {number} start - Selection start position
+	 * @param {number} end - Selection end position
+	 * @param {string} value - Current textarea value
+	 */
+	handleUnindent(start, end, value) {
+		const indent = '  '; // 2 spaces
+
+		if (start === end) {
+			// No selection: remove indentation at cursor line
+			const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+			const lineEnd = value.indexOf('\n', start);
+			const actualLineEnd = lineEnd === -1 ? value.length : lineEnd;
+			const line = value.substring(lineStart, actualLineEnd);
+
+			if (line.startsWith(indent)) {
+				const newLine = line.substring(indent.length);
+				this.element.value = value.substring(0, lineStart) + newLine + value.substring(actualLineEnd);
+				this.element.selectionStart = this.element.selectionEnd = Math.max(lineStart, start - indent.length);
+			}
+		} else {
+			// Selection: unindent all selected lines
+			const beforeSelection = value.substring(0, start);
+			const selectedText = value.substring(start, end);
+			const afterSelection = value.substring(end);
+
+			const unindentedText = selectedText.split('\n').map(line => {
+				return line.startsWith(indent) ? line.substring(indent.length) : line;
+			}).join('\n');
+
+			this.element.value = beforeSelection + unindentedText + afterSelection;
+			this.element.selectionStart = start;
+			this.element.selectionEnd = start + unindentedText.length;
+		}
+
+		// Trigger change event
+		this.element.dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	/**
+	 * Handles auto-indentation on Enter key
+	 * @param {KeyboardEvent} e - The keyboard event
+	 */
+	handleAutoIndent(e) {
+		const start = this.element.selectionStart;
+		const value = this.element.value;
+
+		// Find the current line
+		const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+		const currentLine = value.substring(lineStart, start);
+
+		// Calculate current indentation
+		const indentMatch = currentLine.match(/^(\s*)/);
+		const currentIndent = indentMatch ? indentMatch[1] : '';
+
+		// Check if we need extra indentation (after opening braces)
+		const needsExtraIndent = /[{(\[]$/.test(currentLine.trim());
+		const extraIndent = needsExtraIndent ? '  ' : '';
+
+		// Insert newline with proper indentation
+		setTimeout(() => {
+			const newStart = this.element.selectionStart;
+			const newValue = this.element.value;
+			const insertIndent = '\n' + currentIndent + extraIndent;
+
+			this.element.value = newValue.substring(0, newStart) + insertIndent + newValue.substring(newStart);
+			this.element.selectionStart = this.element.selectionEnd = newStart + insertIndent.length;
+
+			// Trigger change event
+			this.element.dispatchEvent(new Event('input', { bubbles: true }));
+		}, 0);
+	}
+
+	/**
+	 * Updates basic syntax highlighting
+	 * @param {string} code - The code to highlight
+	 */
+	updateSyntaxHighlighting(code) {
+		if (!this.highlightOverlay) return;
+
+		// Create highlighted version of the code
+		const highlightedCode = this.applySyntaxHighlighting(code);
+
+		// Update overlay content
+		this.highlightOverlay.innerHTML = highlightedCode;
+
+		// Update overlay position
+		this.updateHighlightPosition();
+	}
+
+	/**
+	 * Applies basic syntax highlighting to code
+	 * @param {string} code - The code to highlight
+	 * @returns {string} - HTML with syntax highlighting
+	 */
+	applySyntaxHighlighting(code) {
+		if (!code) return '';
+
+		// Escape HTML first
+		let highlighted = this.escapeHtml(code);
+
+		// Apply syntax highlighting patterns
+		highlighted = highlighted
+			// Keywords
+			.replace(/\b(function|var|let|const|if|else|for|while|do|switch|case|default|break|continue|return|try|catch|finally|throw|new|this|typeof|instanceof|in|of|class|extends|super|static|async|await|yield|import|export|from|as|default)\b/g,
+				'<span class="keyword">$1</span>')
+
+			// Strings
+			.replace(/(["'`])((?:\\.|(?!\1)[^\\])*?)\1/g,
+				'<span class="string">$1$2$1</span>')
+
+			// Numbers
+			.replace(/\b(\d+\.?\d*)\b/g,
+				'<span class="number">$1</span>')
+
+			// Comments
+			.replace(/(\/\/.*$)/gm,
+				'<span class="comment">$1</span>')
+			.replace(/(\/\*[\s\S]*?\*\/)/g,
+				'<span class="comment">$1</span>')
+
+			// Operators
+			.replace(/([+\-*/%=<>!&|^~?:])/g,
+				'<span class="operator">$1</span>')
+
+			// Brackets and parentheses
+			.replace(/([{}()\[\]])/g,
+				'<span class="bracket">$1</span>')
+
+			// Function calls (basic detection)
+			.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g,
+				'<span class="function">$1</span>');
+
+		return highlighted;
+	}
+
+	/**
+	 * Updates the position of the highlight overlay to match the textarea
+	 */
+	updateHighlightPosition() {
+		if (!this.highlightOverlay) return;
+
+		// Match textarea scroll position
+		this.highlightOverlay.scrollTop = this.element.scrollTop;
+		this.highlightOverlay.scrollLeft = this.element.scrollLeft;
+	}
+
+	/**
+	 * Highlights syntax errors in the code
+	 * @param {Array} errors - Array of error objects with line/column info
+	 */
+	highlightErrors(errors) {
+		this.currentErrors = errors || [];
+
+		if (!errors || errors.length === 0) {
+			this.clearErrorHighlighting();
+			return;
+		}
+
+		// Add error highlighting class to editor
+		this.element.classList.add('has-errors');
+
+		// Update syntax highlighting to include error highlighting
+		this.updateSyntaxHighlighting(this.element.value);
+	}
+
+	/**
+	 * Clears error highlighting from the editor
+	 */
+	clearErrors() {
+		this.currentErrors = [];
+		this.clearErrorHighlighting();
+	}
+
+	/**
+	 * Clears visual error highlighting
+	 */
+	clearErrorHighlighting() {
+		this.element.classList.remove('has-errors');
+		this.updateSyntaxHighlighting(this.element.value);
+	}
+
+	/**
+	 * Gets the current code value
+	 * @returns {string} - Current code content
+	 */
 	getValue() {
 		return this.element.value;
 	}
 
+	/**
+	 * Sets the code value
+	 * @param {string} code - Code to set
+	 */
 	setValue(code) {
-		this.element.value = code;
+		this.element.value = code || '';
+		this.updateSyntaxHighlighting(this.element.value);
+
+		// Trigger change event if there's a callback
+		if (this.changeCallback) {
+			this.handleCodeChange(this.element.value);
+		}
 	}
 
+	/**
+	 * Registers a callback for code changes
+	 * @param {Function} callback - Callback function to call on code changes
+	 */
 	onCodeChange(callback) {
 		this.changeCallback = callback;
-		this.element.addEventListener('input', (e) => {
-			if (this.changeCallback) {
-				this.changeCallback(e.target.value);
-			}
-		});
+	}
+
+	/**
+	 * Sets focus to the code editor
+	 */
+	focus() {
+		this.element.focus();
+	}
+
+	/**
+	 * Gets the current cursor position
+	 * @returns {Object} - Object with start and end positions
+	 */
+	getCursorPosition() {
+		return {
+			start: this.element.selectionStart,
+			end: this.element.selectionEnd
+		};
+	}
+
+	/**
+	 * Sets the cursor position
+	 * @param {number} start - Start position
+	 * @param {number} end - End position (optional, defaults to start)
+	 */
+	setCursorPosition(start, end = start) {
+		this.element.selectionStart = start;
+		this.element.selectionEnd = end;
+		this.element.focus();
+	}
+
+	/**
+	 * Inserts text at the current cursor position
+	 * @param {string} text - Text to insert
+	 */
+	insertText(text) {
+		const start = this.element.selectionStart;
+		const end = this.element.selectionEnd;
+		const value = this.element.value;
+
+		this.element.value = value.substring(0, start) + text + value.substring(end);
+		this.element.selectionStart = this.element.selectionEnd = start + text.length;
+
+		// Trigger change event
+		this.element.dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	/**
+	 * Gets the selected text
+	 * @returns {string} - Currently selected text
+	 */
+	getSelectedText() {
+		const start = this.element.selectionStart;
+		const end = this.element.selectionEnd;
+		return this.element.value.substring(start, end);
+	}
+
+	/**
+	 * Replaces the selected text
+	 * @param {string} text - Text to replace selection with
+	 */
+	replaceSelectedText(text) {
+		const start = this.element.selectionStart;
+		const end = this.element.selectionEnd;
+		const value = this.element.value;
+
+		this.element.value = value.substring(0, start) + text + value.substring(end);
+		this.element.selectionStart = start;
+		this.element.selectionEnd = start + text.length;
+
+		// Trigger change event
+		this.element.dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	/**
+	 * Escapes HTML characters to prevent XSS
+	 * @param {string} text - Text to escape
+	 * @returns {string} - HTML-escaped text
+	 */
+	escapeHtml(text) {
+		if (typeof text !== 'string') {
+			return text;
+		}
+
+		return text
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	/**
+	 * Destroys the code editor and cleans up resources
+	 */
+	destroy() {
+		// Clear debounce timer
+		if (this.debounceTimer) {
+			clearTimeout(this.debounceTimer);
+		}
+
+		// Remove event listeners
+		this.element.removeEventListener('input', this.handleCodeChange);
+		this.element.removeEventListener('keydown', this.handleKeyDown);
+		this.element.removeEventListener('scroll', this.updateHighlightPosition);
+		window.removeEventListener('resize', this.updateHighlightPosition);
+
+		// Remove added classes
+		this.element.classList.remove('enhanced-code-editor', 'syntax-highlighted', 'has-errors');
+
+		// Clean up references
+		this.changeCallback = null;
+		this.currentErrors = [];
+		this.highlightOverlay = null;
 	}
 }
 
