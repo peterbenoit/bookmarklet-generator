@@ -51,3 +51,7 @@ build/
 tmp/
 temp/
 /.kiro
+
+
+# other
+package-lock.json
