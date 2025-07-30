@@ -57,12 +57,6 @@ header p {
 	color: #2c3e50;
 }
 
-/* Enhanced Code Editor Container */
-.code-editor-container {
-	position: relative;
-	width: 100%;
-}
-
 #code-editor {
 	width: 100%;
 	min-height: 200px;
@@ -74,9 +68,6 @@ header p {
 	line-height: 1.5;
 	resize: vertical;
 	transition: border-color 0.3s ease;
-	background: transparent;
-	position: relative;
-	z-index: 2;
 }
 
 #code-editor:focus {
@@ -85,7 +76,7 @@ header p {
 	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
-/* Enhanced code editor with syntax highlighting */
+/* Enhanced code editor */
 #code-editor.enhanced-code-editor {
 	tab-size: 2;
 	-moz-tab-size: 2;
@@ -95,75 +86,6 @@ header p {
 #code-editor.has-errors {
 	border-color: #e74c3c;
 	box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
-}
-
-/* Syntax highlighting overlay */
-.code-highlight-overlay {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	padding: 1rem;
-	font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
-	font-size: 14px;
-	line-height: 1.5;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	overflow: hidden;
-	pointer-events: none;
-	z-index: 1;
-	color: transparent;
-	border: 2px solid transparent;
-	border-radius: 4px;
-	background: transparent;
-}
-
-/* Syntax highlighting colors */
-.code-highlight-overlay .keyword {
-	color: #0066cc;
-	font-weight: 600;
-}
-
-.code-highlight-overlay .string {
-	color: #008000;
-}
-
-.code-highlight-overlay .number {
-	color: #ff6600;
-}
-
-.code-highlight-overlay .comment {
-	color: #999999;
-	font-style: italic;
-}
-
-.code-highlight-overlay .operator {
-	color: #666666;
-	font-weight: 600;
-}
-
-.code-highlight-overlay .bracket {
-	color: #333333;
-	font-weight: 600;
-}
-
-.code-highlight-overlay .function {
-	color: #9900cc;
-	font-weight: 600;
-}
-
-/* Error highlighting in overlay */
-.code-highlight-overlay .error-line {
-	background-color: rgba(231, 76, 60, 0.1);
-	border-left: 3px solid #e74c3c;
-	padding-left: 0.5rem;
-	margin-left: -0.5rem;
-}
-
-.code-highlight-overlay .error-token {
-	background-color: rgba(231, 76, 60, 0.2);
-	border-bottom: 2px wavy #e74c3c;
 }
 
 /* Error display */

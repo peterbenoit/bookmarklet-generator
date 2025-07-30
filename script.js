@@ -151,8 +151,8 @@ class BookmarkletApp {
 }
 
 /**
- * CodeEditor class provides enhanced code editing functionality with syntax highlighting,
- * error display, and real-time validation for JavaScript code input.
+ * CodeEditor class provides enhanced code editing functionality with error display
+ * and real-time validation for JavaScript code input using a textarea-based approach.
  */
 class CodeEditor {
 	constructor(elementId) {
@@ -161,7 +161,6 @@ class CodeEditor {
 		this.debounceTimer = null;
 		this.debounceDelay = 300; // 300ms debounce as specified
 		this.currentErrors = [];
-		this.highlightOverlay = null;
 
 		if (!this.element) {
 			throw new Error(`CodeEditor: Element with id '${elementId}' not found`);
@@ -174,53 +173,11 @@ class CodeEditor {
 	 * Initialize the code editor with enhanced functionality
 	 */
 	init() {
-		// Set up the editor container structure
-		this.setupEditorStructure();
-
-		// Add syntax highlighting support
-		this.setupSyntaxHighlighting();
-
 		// Set up event listeners
 		this.setupEventListeners();
 
 		// Apply initial styling
 		this.applyEditorStyling();
-	}
-
-	/**
-	 * Sets up the editor structure with overlay for highlighting
-	 */
-	setupEditorStructure() {
-		// Wrap the textarea in a container for positioning overlays
-		const container = document.createElement('div');
-		container.className = 'code-editor-container';
-
-		// Insert container before the textarea
-		this.element.parentNode.insertBefore(container, this.element);
-
-		// Move textarea into container
-		container.appendChild(this.element);
-
-		// Create highlight overlay
-		this.highlightOverlay = document.createElement('div');
-		this.highlightOverlay.className = 'code-highlight-overlay';
-		this.highlightOverlay.setAttribute('aria-hidden', 'true');
-		container.appendChild(this.highlightOverlay);
-
-		// Store reference to container
-		this.container = container;
-	}
-
-	/**
-	 * Sets up basic syntax highlighting functionality
-	 */
-	setupSyntaxHighlighting() {
-		// Add CSS class for syntax highlighting support
-		this.element.classList.add('syntax-highlighted');
-
-		// Set up highlighting update on scroll/resize
-		this.element.addEventListener('scroll', () => this.updateHighlightPosition());
-		window.addEventListener('resize', () => this.updateHighlightPosition());
 	}
 
 	/**
@@ -230,7 +187,6 @@ class CodeEditor {
 		// Input event with debouncing for real-time validation
 		this.element.addEventListener('input', (e) => {
 			this.handleCodeChange(e.target.value);
-			this.updateSyntaxHighlighting(e.target.value);
 		});
 
 		// Additional events for better UX
@@ -238,18 +194,12 @@ class CodeEditor {
 			// Handle paste with slight delay to get the pasted content
 			setTimeout(() => {
 				this.handleCodeChange(this.element.value);
-				this.updateSyntaxHighlighting(this.element.value);
 			}, 10);
 		});
 
 		// Handle tab key for proper indentation
 		this.element.addEventListener('keydown', (e) => {
 			this.handleKeyDown(e);
-		});
-
-		// Update highlighting position on scroll
-		this.element.addEventListener('scroll', () => {
-			this.updateHighlightPosition();
 		});
 	}
 
@@ -418,80 +368,6 @@ class CodeEditor {
 	}
 
 	/**
-	 * Updates basic syntax highlighting
-	 * @param {string} code - The code to highlight
-	 */
-	updateSyntaxHighlighting(code) {
-		if (!this.highlightOverlay) return;
-
-		// Create highlighted version of the code
-		const highlightedCode = this.applySyntaxHighlighting(code);
-
-		// Update overlay content
-		this.highlightOverlay.innerHTML = highlightedCode;
-
-		// Update overlay position
-		this.updateHighlightPosition();
-	}
-
-	/**
-	 * Applies basic syntax highlighting to code
-	 * @param {string} code - The code to highlight
-	 * @returns {string} - HTML with syntax highlighting
-	 */
-	applySyntaxHighlighting(code) {
-		if (!code) return '';
-
-		// Escape HTML first
-		let highlighted = this.escapeHtml(code);
-
-		// Apply syntax highlighting patterns
-		highlighted = highlighted
-			// Keywords
-			.replace(/\b(function|var|let|const|if|else|for|while|do|switch|case|default|break|continue|return|try|catch|finally|throw|new|this|typeof|instanceof|in|of|class|extends|super|static|async|await|yield|import|export|from|as|default)\b/g,
-				'<span class="keyword">$1</span>')
-
-			// Strings
-			.replace(/(["'`])((?:\\.|(?!\1)[^\\])*?)\1/g,
-				'<span class="string">$1$2$1</span>')
-
-			// Numbers
-			.replace(/\b(\d+\.?\d*)\b/g,
-				'<span class="number">$1</span>')
-
-			// Comments
-			.replace(/(\/\/.*$)/gm,
-				'<span class="comment">$1</span>')
-			.replace(/(\/\*[\s\S]*?\*\/)/g,
-				'<span class="comment">$1</span>')
-
-			// Operators
-			.replace(/([+\-*/%=<>!&|^~?:])/g,
-				'<span class="operator">$1</span>')
-
-			// Brackets and parentheses
-			.replace(/([{}()\[\]])/g,
-				'<span class="bracket">$1</span>')
-
-			// Function calls (basic detection)
-			.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g,
-				'<span class="function">$1</span>');
-
-		return highlighted;
-	}
-
-	/**
-	 * Updates the position of the highlight overlay to match the textarea
-	 */
-	updateHighlightPosition() {
-		if (!this.highlightOverlay) return;
-
-		// Match textarea scroll position
-		this.highlightOverlay.scrollTop = this.element.scrollTop;
-		this.highlightOverlay.scrollLeft = this.element.scrollLeft;
-	}
-
-	/**
 	 * Highlights syntax errors in the code
 	 * @param {Array} errors - Array of error objects with line/column info
 	 */
@@ -505,9 +381,6 @@ class CodeEditor {
 
 		// Add error highlighting class to editor
 		this.element.classList.add('has-errors');
-
-		// Update syntax highlighting to include error highlighting
-		this.updateSyntaxHighlighting(this.element.value);
 	}
 
 	/**
@@ -523,7 +396,6 @@ class CodeEditor {
 	 */
 	clearErrorHighlighting() {
 		this.element.classList.remove('has-errors');
-		this.updateSyntaxHighlighting(this.element.value);
 	}
 
 	/**
@@ -540,7 +412,6 @@ class CodeEditor {
 	 */
 	setValue(code) {
 		this.element.value = code || '';
-		this.updateSyntaxHighlighting(this.element.value);
 
 		// Trigger change event if there's a callback
 		if (this.changeCallback) {
@@ -629,24 +500,6 @@ class CodeEditor {
 	}
 
 	/**
-	 * Escapes HTML characters to prevent XSS
-	 * @param {string} text - Text to escape
-	 * @returns {string} - HTML-escaped text
-	 */
-	escapeHtml(text) {
-		if (typeof text !== 'string') {
-			return text;
-		}
-
-		return text
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
-	}
-
-	/**
 	 * Destroys the code editor and cleans up resources
 	 */
 	destroy() {
@@ -655,19 +508,12 @@ class CodeEditor {
 			clearTimeout(this.debounceTimer);
 		}
 
-		// Remove event listeners
-		this.element.removeEventListener('input', this.handleCodeChange);
-		this.element.removeEventListener('keydown', this.handleKeyDown);
-		this.element.removeEventListener('scroll', this.updateHighlightPosition);
-		window.removeEventListener('resize', this.updateHighlightPosition);
-
 		// Remove added classes
-		this.element.classList.remove('enhanced-code-editor', 'syntax-highlighted', 'has-errors');
+		this.element.classList.remove('enhanced-code-editor', 'has-errors');
 
 		// Clean up references
 		this.changeCallback = null;
 		this.currentErrors = [];
-		this.highlightOverlay = null;
 	}
 }
 
