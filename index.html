@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Bookmarklet Generator</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<div class="container">
+		<header>
+			<h1>Bookmarklet Generator</h1>
+			<p>Create custom bookmarklets from JavaScript code</p>
+		</header>
+
+		<main class="app-layout">
+			<section class="code-section">
+				<label for="code-editor">JavaScript Code:</label>
+				<textarea id="code-editor" placeholder="Enter your JavaScript code here..."></textarea>
+				<div id="error-display" class="error-panel hidden"></div>
+			</section>
+
+			<section class="name-section">
+				<label for="bookmarklet-name">Bookmarklet Name:</label>
+				<input type="text" id="bookmarklet-name" placeholder="Custom Bookmarklet">
+			</section>
+
+			<section class="output-section">
+				<h3>Generated Bookmarklet:</h3>
+				<div id="bookmarklet-output" class="output-display">
+					<p class="placeholder">Enter JavaScript code to generate a bookmarklet</p>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="script.js"></script>
+</body>
+
+</html>

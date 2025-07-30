@@ -1,0 +1,40 @@
+{
+	"name": "bookmarklet-generator",
+	"version": "1.0.0",
+	"description": "A web-based tool for creating custom bookmarklets from JavaScript code",
+	"main": "index.html",
+	"scripts": {
+		"dev": "python3 -m http.server 3000",
+		"build": "echo 'Static site - no build step required'",
+		"start": "python3 -m http.server 8080",
+		"test": "echo 'Tests will be added in later tasks'",
+		"lint": "echo 'Linting will be configured in later tasks'",
+		"deploy": "vercel --prod"
+	},
+	"keywords": [
+		"bookmarklet",
+		"javascript",
+		"browser",
+		"web-tool",
+		"code-generator"
+	],
+	"author": "Bookmarklet Generator",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/peterbenoit/bookmarklet-generator.git"
+	},
+	"homepage": "https://bookmarklet-generator.vercel.app",
+	"engines": {
+		"node": ">=14.0.0"
+	},
+	"dependencies": {
+		"vercel": "^44.6.4"
+	},
+	"browserslist": [
+		"> 1%",
+		"last 2 versions",
+		"not dead",
+		"not ie 11"
+	]
+}

@@ -1,0 +1,210 @@
+/* Reset and base styles */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	line-height: 1.6;
+	color: #333;
+	background-color: #f5f5f5;
+}
+
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 20px;
+}
+
+/* Header */
+header {
+	text-align: center;
+	margin-bottom: 2rem;
+}
+
+header h1 {
+	color: #2c3e50;
+	margin-bottom: 0.5rem;
+}
+
+header p {
+	color: #7f8c8d;
+	font-size: 1.1rem;
+}
+
+/* Main layout */
+.app-layout {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 2rem;
+	background: white;
+	padding: 2rem;
+	border-radius: 8px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Code section */
+.code-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.code-section label {
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+	color: #2c3e50;
+}
+
+#code-editor {
+	width: 100%;
+	min-height: 200px;
+	padding: 1rem;
+	border: 2px solid #e1e8ed;
+	border-radius: 4px;
+	font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+	font-size: 14px;
+	line-height: 1.5;
+	resize: vertical;
+	transition: border-color 0.3s ease;
+}
+
+#code-editor:focus {
+	outline: none;
+	border-color: #3498db;
+}
+
+/* Error display */
+.error-panel {
+	margin-top: 1rem;
+	padding: 1rem;
+	background-color: #fee;
+	border: 1px solid #fcc;
+	border-radius: 4px;
+	color: #c33;
+}
+
+.error-panel.hidden {
+	display: none;
+}
+
+/* Name section */
+.name-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.name-section label {
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+	color: #2c3e50;
+}
+
+#bookmarklet-name {
+	padding: 0.75rem;
+	border: 2px solid #e1e8ed;
+	border-radius: 4px;
+	font-size: 16px;
+	transition: border-color 0.3s ease;
+}
+
+#bookmarklet-name:focus {
+	outline: none;
+	border-color: #3498db;
+}
+
+/* Output section */
+.output-section h3 {
+	color: #2c3e50;
+	margin-bottom: 1rem;
+}
+
+.output-display {
+	padding: 1rem;
+	border: 2px dashed #bdc3c7;
+	border-radius: 4px;
+	min-height: 80px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.output-display .placeholder {
+	color: #7f8c8d;
+	font-style: italic;
+}
+
+.bookmarklet-link {
+	display: inline-block;
+	padding: 0.75rem 1.5rem;
+	background-color: #3498db;
+	color: white;
+	text-decoration: none;
+	border-radius: 4px;
+	font-weight: 600;
+	transition: background-color 0.3s ease;
+	cursor: move;
+}
+
+.bookmarklet-link:hover {
+	background-color: #2980b9;
+}
+
+.bookmarklet-link:active {
+	transform: translateY(1px);
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+	.app-layout {
+		grid-template-columns: 2fr 1fr;
+		grid-template-rows: auto auto;
+	}
+
+	.code-section {
+		grid-row: 1 / 3;
+	}
+
+	.name-section {
+		grid-column: 2;
+		grid-row: 1;
+	}
+
+	.output-section {
+		grid-column: 2;
+		grid-row: 2;
+	}
+}
+
+@media (max-width: 767px) {
+	.container {
+		padding: 10px;
+	}
+
+	.app-layout {
+		padding: 1rem;
+		gap: 1.5rem;
+	}
+
+	#code-editor {
+		min-height: 150px;
+	}
+}
+
+/* Utility classes */
+.hidden {
+	display: none !important;
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
