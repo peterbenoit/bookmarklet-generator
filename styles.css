@@ -207,55 +207,302 @@ header p {
 }
 
 /* Output section */
-.output-section h3 {
+.output-section h2 {
 	color: #2c3e50;
 	margin-bottom: 1rem;
+	font-size: 1.25rem;
 }
 
 .output-display {
-	padding: 1rem;
+	padding: 1.5rem;
 	border: 2px dashed #bdc3c7;
-	border-radius: 4px;
-	min-height: 80px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: border-color 0.3s ease, background-color 0.3s ease;
+	border-radius: 8px;
+	min-height: 120px;
+	transition: all 0.3s ease;
+	position: relative;
 }
 
 .output-display.has-content {
 	border-color: #27ae60;
 	background-color: #f8fff9;
+	border-style: solid;
 }
 
 .output-display.has-error {
 	border-color: #e74c3c;
 	background-color: #fdf2f2;
+	border-style: solid;
 }
 
-.output-display .placeholder {
+.output-display.generation-success {
+	transform: scale(1.02);
+	box-shadow: 0 4px 20px rgba(39, 174, 96, 0.2);
+}
+
+/* Placeholder state */
+.placeholder-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
 	color: #7f8c8d;
+	min-height: 80px;
+}
+
+.placeholder-icon {
+	font-size: 2rem;
+	margin-bottom: 0.5rem;
+}
+
+.placeholder-message h3 {
+	margin-bottom: 0.5rem;
+	color: #5a6c7d;
+}
+
+.placeholder-message p {
 	font-style: italic;
+	font-size: 0.9rem;
+}
+
+/* Bookmarklet container */
+.bookmarklet-container {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.bookmarklet-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.bookmarklet-title {
+	color: #2c3e50;
+	font-size: 1.1rem;
+	margin: 0;
+	word-break: break-word;
+}
+
+.bookmarklet-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Length information */
+.length-info {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.85rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: 12px;
+	font-weight: 500;
+}
+
+.length-info.length-good {
+	background-color: #d4edda;
+	color: #155724;
+}
+
+.length-info.length-warning {
+	background-color: #fff3cd;
+	color: #856404;
+}
+
+.length-info.length-long {
+	background-color: #f8d7da;
+	color: #721c24;
+}
+
+.length-info.length-error {
+	background-color: #f8d7da;
+	color: #721c24;
+}
+
+.length-icon {
+	font-size: 0.8rem;
+}
+
+.length-text {
+	white-space: nowrap;
+}
+
+/* Bookmarklet link container */
+.bookmarklet-link-container {
+	display: flex;
+	justify-content: center;
+	margin: 0.5rem 0;
 }
 
 .bookmarklet-link {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
 	padding: 0.75rem 1.5rem;
-	background-color: #3498db;
+	background: linear-gradient(135deg, #3498db, #2980b9);
 	color: white;
 	text-decoration: none;
-	border-radius: 4px;
+	border-radius: 8px;
 	font-weight: 600;
-	transition: background-color 0.3s ease;
+	font-size: 1rem;
+	transition: all 0.2s ease;
 	cursor: move;
+	border: 2px solid transparent;
+	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+	user-select: none;
+	position: relative;
+	overflow: hidden;
 }
 
 .bookmarklet-link:hover {
-	background-color: #2980b9;
+	background: linear-gradient(135deg, #2980b9, #1f5f8b);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }
 
 .bookmarklet-link:active {
-	transform: translateY(1px);
+	transform: translateY(0);
+	box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+}
+
+.bookmarklet-link.dragging {
+	opacity: 0.8;
+	transform: rotate(5deg) scale(1.05);
+	box-shadow: 0 8px 25px rgba(52, 152, 219, 0.5);
+	border-color: #27ae60;
+}
+
+/* Drag feedback overlay */
+.drag-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(39, 174, 96, 0.9);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	z-index: 10;
+	animation: dragPulse 0.6s ease-in-out infinite alternate;
+}
+
+.drag-message {
+	text-align: center;
+	color: white;
+}
+
+.drag-icon {
+	font-size: 2rem;
+	margin-bottom: 0.5rem;
+	animation: dragBounce 0.8s ease-in-out infinite alternate;
+}
+
+.drag-text {
+	font-weight: 600;
+	font-size: 1.1rem;
+}
+
+@keyframes dragPulse {
+	from {
+		opacity: 0.8;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes dragBounce {
+	from {
+		transform: translateY(0);
+	}
+
+	to {
+		transform: translateY(-5px);
+	}
+}
+
+/* Instructions */
+.bookmarklet-instructions {
+	background-color: #f8f9fa;
+	border: 1px solid #e9ecef;
+	border-radius: 6px;
+	padding: 1rem;
+	font-size: 0.9rem;
+}
+
+.bookmarklet-instructions p {
+	margin: 0 0 0.5rem 0;
+	color: #495057;
+	font-weight: 600;
+}
+
+.bookmarklet-instructions ul {
+	margin: 0;
+	padding-left: 1.2rem;
+	color: #6c757d;
+}
+
+.bookmarklet-instructions li {
+	margin-bottom: 0.25rem;
+}
+
+/* Warning display */
+.bookmarklet-warning {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	background-color: #fff3cd;
+	border: 1px solid #ffeaa7;
+	border-radius: 6px;
+	padding: 1rem;
+	margin-top: 0.5rem;
+}
+
+.warning-icon {
+	font-size: 1.2rem;
+	flex-shrink: 0;
+}
+
+.warning-message {
+	color: #856404;
+	font-size: 0.9rem;
+	line-height: 1.4;
+}
+
+/* Error state */
+.error-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	color: #dc3545;
+	min-height: 80px;
+	gap: 0.75rem;
+}
+
+.error-icon {
+	font-size: 2rem;
+}
+
+.error-message h3 {
+	margin: 0 0 0.5rem 0;
+	color: #721c24;
+	font-size: 1.1rem;
+}
+
+.error-message p {
+	margin: 0;
+	color: #856404;
+	font-size: 0.9rem;
 }
 
 /* Responsive design */

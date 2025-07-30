@@ -717,26 +717,381 @@ class NameInput {
 	}
 }
 
+/**
+ * OutputDisplay class manages the display of generated bookmarklets with draggable functionality
+ * and provides visual feedback for successful generation and error states
+ */
 class OutputDisplay {
 	constructor(elementId) {
 		this.element = document.getElementById(elementId);
+		this.currentBookmarklet = null;
+
+		if (!this.element) {
+			throw new Error(`OutputDisplay: Element with id '${elementId}' not found`);
+		}
+
+		this.init();
 	}
 
+	/**
+	 * Initialize the output display component
+	 */
+	init() {
+		// Set initial state
+		this.showPlaceholder();
+	}
+
+	/**
+	 * Updates the display with a generated bookmarklet
+	 * @param {Object} bookmarklet - Bookmarklet object with name, url, isValid, etc.
+	 */
 	updateBookmarklet(bookmarklet) {
-		// Placeholder implementation
-		this.element.innerHTML = `<p>Bookmarklet ready: ${bookmarklet.name}</p>`;
+		if (!bookmarklet || !bookmarklet.isValid) {
+			this.currentBookmarklet = null;
+			this.showError('Unable to generate bookmarklet');
+			return;
+		}
+
+		this.currentBookmarklet = bookmarklet;
+		this.displaySuccessState(bookmarklet);
 	}
 
+	/**
+	 * Displays the successful bookmarklet generation state
+	 * @param {Object} bookmarklet - Valid bookmarklet object
+	 */
+	displaySuccessState(bookmarklet) {
+		// Clear any error states
+		this.element.classList.remove('has-error');
+		this.element.classList.add('has-content');
+
+		// Create the bookmarklet display HTML
+		const displayHtml = this.createBookmarkletDisplay(bookmarklet);
+		this.element.innerHTML = displayHtml;
+
+		// Set up drag functionality for the bookmarklet link
+		this.setupDragFunctionality();
+
+		// Add visual feedback for successful generation
+		this.showSuccessFeedback();
+	}
+
+	/**
+	 * Creates the HTML display for a bookmarklet
+	 * @param {Object} bookmarklet - Bookmarklet object
+	 * @returns {string} - HTML string for the bookmarklet display
+	 */
+	createBookmarkletDisplay(bookmarklet) {
+		const escapedName = this.escapeHtml(bookmarklet.name);
+		const lengthInfo = this.getLengthDisplayInfo(bookmarklet);
+
+		return `
+			<div class="bookmarklet-container">
+				<div class="bookmarklet-header">
+					<h3 class="bookmarklet-title">${escapedName}</h3>
+					<div class="bookmarklet-meta">
+						${lengthInfo.html}
+					</div>
+				</div>
+
+				<div class="bookmarklet-link-container">
+					<a href="${bookmarklet.url}"
+					   class="bookmarklet-link"
+					   draggable="true"
+					   title="Drag this to your bookmarks bar or right-click to copy"
+					   data-bookmarklet-name="${escapedName}">
+						📖 ${escapedName}
+					</a>
+				</div>
+
+				<div class="bookmarklet-instructions">
+					<p><strong>How to use:</strong></p>
+					<ul>
+						<li>Drag the link above to your bookmarks bar</li>
+						<li>Or right-click and select "Bookmark this link"</li>
+						<li>Click the bookmark on any webpage to run your code</li>
+					</ul>
+				</div>
+
+				${bookmarklet.lengthWarning ? this.createWarningDisplay(bookmarklet.lengthWarning) : ''}
+			</div>
+		`;
+	}
+
+	/**
+	 * Gets length display information for the bookmarklet
+	 * @param {Object} bookmarklet - Bookmarklet object
+	 * @returns {Object} - Display information with HTML and status
+	 */
+	getLengthDisplayInfo(bookmarklet) {
+		const length = bookmarklet.length || 0;
+		const status = bookmarklet.lengthStatus || 'unknown';
+
+		let statusClass = 'length-good';
+		let statusText = 'Good';
+		let statusIcon = '✅';
+
+		switch (status) {
+			case 'warning':
+				statusClass = 'length-warning';
+				statusText = 'Long';
+				statusIcon = '⚠️';
+				break;
+			case 'long':
+				statusClass = 'length-long';
+				statusText = 'Very Long';
+				statusIcon = '⚠️';
+				break;
+			case 'too_long':
+				statusClass = 'length-error';
+				statusText = 'Too Long';
+				statusIcon = '❌';
+				break;
+			case 'good':
+			default:
+				statusClass = 'length-good';
+				statusText = 'Good';
+				statusIcon = '✅';
+				break;
+		}
+
+		const html = `
+			<div class="length-info ${statusClass}">
+				<span class="length-icon">${statusIcon}</span>
+				<span class="length-text">${length} characters - ${statusText}</span>
+			</div>
+		`;
+
+		return { html, status, length };
+	}
+
+	/**
+	 * Creates a warning display for length or compatibility issues
+	 * @param {string} warning - Warning message
+	 * @returns {string} - HTML for warning display
+	 */
+	createWarningDisplay(warning) {
+		return `
+			<div class="bookmarklet-warning">
+				<div class="warning-icon">⚠️</div>
+				<div class="warning-message">${this.escapeHtml(warning)}</div>
+			</div>
+		`;
+	}
+
+	/**
+	 * Sets up drag functionality for the bookmarklet link
+	 */
+	setupDragFunctionality() {
+		const bookmarkletLink = this.element.querySelector('.bookmarklet-link');
+		if (!bookmarkletLink) return;
+
+		// Handle drag start
+		bookmarkletLink.addEventListener('dragstart', (e) => {
+			// Set the drag data for the bookmarklet
+			const bookmarkletName = bookmarkletLink.getAttribute('data-bookmarklet-name');
+			const bookmarkletUrl = bookmarkletLink.href;
+
+			// Set drag data in multiple formats for better compatibility
+			e.dataTransfer.setData('text/uri-list', bookmarkletUrl);
+			e.dataTransfer.setData('text/plain', bookmarkletUrl);
+			e.dataTransfer.setData('text/html', `<a href="${bookmarkletUrl}">${bookmarkletName}</a>`);
+
+			// Set drag effect
+			e.dataTransfer.effectAllowed = 'copy';
+
+			// Add visual feedback during drag
+			bookmarkletLink.classList.add('dragging');
+
+			// Show drag instructions
+			this.showDragFeedback();
+		});
+
+		// Handle drag end
+		bookmarkletLink.addEventListener('dragend', (e) => {
+			bookmarkletLink.classList.remove('dragging');
+			this.hideDragFeedback();
+		});
+
+		// Prevent default click behavior when dragging
+		bookmarkletLink.addEventListener('click', (e) => {
+			// Only prevent default if this is likely a drag operation
+			// (user clicked and held for a short time)
+			if (bookmarkletLink.classList.contains('dragging')) {
+				e.preventDefault();
+			}
+		});
+
+		// Add context menu support for copying
+		bookmarkletLink.addEventListener('contextmenu', (e) => {
+			// Let the browser handle the context menu
+			// Users can right-click to bookmark or copy link
+		});
+	}
+
+	/**
+	 * Shows visual feedback during drag operations
+	 */
+	showDragFeedback() {
+		// Add a temporary drag instruction overlay
+		const existingOverlay = this.element.querySelector('.drag-overlay');
+		if (existingOverlay) return;
+
+		const overlay = document.createElement('div');
+		overlay.className = 'drag-overlay';
+		overlay.innerHTML = `
+			<div class="drag-message">
+				<div class="drag-icon">👆</div>
+				<div class="drag-text">Drag to your bookmarks bar!</div>
+			</div>
+		`;
+
+		this.element.appendChild(overlay);
+	}
+
+	/**
+	 * Hides drag feedback overlay
+	 */
+	hideDragFeedback() {
+		const overlay = this.element.querySelector('.drag-overlay');
+		if (overlay) {
+			overlay.remove();
+		}
+	}
+
+	/**
+	 * Shows visual feedback for successful bookmarklet generation
+	 */
+	showSuccessFeedback() {
+		// Add a subtle animation or highlight to indicate success
+		this.element.classList.add('generation-success');
+
+		// Remove the success class after animation
+		setTimeout(() => {
+			this.element.classList.remove('generation-success');
+		}, 1000);
+	}
+
+	/**
+	 * Shows an error state with the provided message
+	 * @param {string} message - Error message to display
+	 */
 	showError(message) {
-		this.element.innerHTML = `<p class="error">${message}</p>`;
+		// Don't clear currentBookmarklet here - we might want to restore it later
+
+		// Set error state classes
+		this.element.classList.remove('has-content', 'generation-success');
+		this.element.classList.add('has-error');
+
+		// Display error message
+		const errorHtml = `
+			<div class="error-container">
+				<div class="error-icon">❌</div>
+				<div class="error-message">
+					<h3>Unable to Generate Bookmarklet</h3>
+					<p>${this.escapeHtml(message)}</p>
+				</div>
+			</div>
+		`;
+
+		this.element.innerHTML = errorHtml;
 	}
 
+	/**
+	 * Clears any error state and returns to normal display
+	 */
 	clearError() {
-		// Will be implemented in later tasks
+		this.element.classList.remove('has-error');
+
+		// If we have a current bookmarklet, redisplay it
+		if (this.currentBookmarklet && this.currentBookmarklet.isValid) {
+			this.displaySuccessState(this.currentBookmarklet);
+		} else {
+			this.showPlaceholder();
+		}
 	}
 
+	/**
+	 * Shows the placeholder state when no bookmarklet is generated
+	 */
 	showPlaceholder() {
-		this.element.innerHTML = '<p class="placeholder">Enter JavaScript code to generate a bookmarklet</p>';
+		this.currentBookmarklet = null;
+
+		// Clear all state classes
+		this.element.classList.remove('has-content', 'has-error', 'generation-success');
+
+		// Display placeholder content
+		const placeholderHtml = `
+			<div class="placeholder-container">
+				<div class="placeholder-icon">📝</div>
+				<div class="placeholder-message">
+					<h3>Ready to Create</h3>
+					<p>Enter JavaScript code above to generate your bookmarklet</p>
+				</div>
+			</div>
+		`;
+
+		this.element.innerHTML = placeholderHtml;
+	}
+
+	/**
+	 * Gets the currently displayed bookmarklet
+	 * @returns {Object|null} - Current bookmarklet object or null
+	 */
+	getCurrentBookmarklet() {
+		return this.currentBookmarklet;
+	}
+
+	/**
+	 * Checks if the display is currently showing an error
+	 * @returns {boolean} - True if in error state
+	 */
+	isShowingError() {
+		return this.element.classList.contains('has-error');
+	}
+
+	/**
+	 * Checks if the display has content (valid bookmarklet)
+	 * @returns {boolean} - True if showing valid content
+	 */
+	hasContent() {
+		return this.element.classList.contains('has-content');
+	}
+
+	/**
+	 * Escapes HTML characters to prevent XSS
+	 * @param {string} text - Text to escape
+	 * @returns {string} - HTML-escaped text
+	 */
+	escapeHtml(text) {
+		if (typeof text !== 'string') {
+			return text;
+		}
+
+		return text
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	/**
+	 * Destroys the output display and cleans up resources
+	 */
+	destroy() {
+		// Remove any event listeners and clean up
+		const bookmarkletLink = this.element.querySelector('.bookmarklet-link');
+		if (bookmarkletLink) {
+			// Event listeners will be automatically removed when element is removed
+		}
+
+		// Clear references
+		this.currentBookmarklet = null;
+
+		// Reset element state
+		this.element.classList.remove('has-content', 'has-error', 'generation-success');
+		this.showPlaceholder();
 	}
 }
 
