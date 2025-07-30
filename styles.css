@@ -73,6 +73,7 @@ header p {
 #code-editor:focus {
 	outline: none;
 	border-color: #3498db;
+	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
 /* Error display */
@@ -112,6 +113,7 @@ header p {
 #bookmarklet-name:focus {
 	outline: none;
 	border-color: #3498db;
+	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
 /* Output section */
@@ -128,6 +130,17 @@ header p {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.output-display.has-content {
+	border-color: #27ae60;
+	background-color: #f8fff9;
+}
+
+.output-display.has-error {
+	border-color: #e74c3c;
+	background-color: #fdf2f2;
 }
 
 .output-display .placeholder {
@@ -189,6 +202,83 @@ header p {
 
 	#code-editor {
 		min-height: 150px;
+		font-size: 16px;
+		/* Prevent zoom on iOS */
+	}
+
+	#bookmarklet-name {
+		font-size: 16px;
+		/* Prevent zoom on iOS */
+	}
+
+	header h1 {
+		font-size: 1.8rem;
+	}
+
+	header p {
+		font-size: 1rem;
+	}
+}
+
+/* Additional responsive breakpoints */
+@media (max-width: 480px) {
+	.container {
+		padding: 5px;
+	}
+
+	.app-layout {
+		padding: 0.75rem;
+		gap: 1rem;
+	}
+
+	header {
+		margin-bottom: 1rem;
+	}
+
+	header h1 {
+		font-size: 1.5rem;
+	}
+}
+
+/* Focus management and accessibility */
+*:focus {
+	outline: 2px solid #3498db;
+	outline-offset: 2px;
+}
+
+button:focus,
+input:focus,
+textarea:focus,
+a:focus {
+	outline: 2px solid #3498db;
+	outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.app-layout {
+		border: 2px solid #000;
+	}
+
+	#code-editor,
+	#bookmarklet-name {
+		border: 2px solid #000;
+	}
+
+	.bookmarklet-link {
+		border: 2px solid #000;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
 	}
 }
 
@@ -207,4 +297,21 @@ header p {
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
 	border: 0;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+	position: absolute;
+	top: -40px;
+	left: 6px;
+	background: #3498db;
+	color: white;
+	padding: 8px;
+	text-decoration: none;
+	border-radius: 4px;
+	z-index: 1000;
+}
+
+.skip-link:focus {
+	top: 6px;
 }

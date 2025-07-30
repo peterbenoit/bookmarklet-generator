@@ -9,27 +9,40 @@
 </head>
 
 <body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
 	<div class="container">
 		<header>
 			<h1>Bookmarklet Generator</h1>
 			<p>Create custom bookmarklets from JavaScript code</p>
 		</header>
 
-		<main class="app-layout">
-			<section class="code-section">
+		<main id="main-content" class="app-layout">
+			<section class="code-section" aria-labelledby="code-section-heading">
+				<h2 id="code-section-heading" class="sr-only">JavaScript Code Editor</h2>
 				<label for="code-editor">JavaScript Code:</label>
-				<textarea id="code-editor" placeholder="Enter your JavaScript code here..."></textarea>
-				<div id="error-display" class="error-panel hidden"></div>
+				<textarea id="code-editor" placeholder="Enter your JavaScript code here..."
+					aria-describedby="code-editor-help error-display" spellcheck="false" autocomplete="off"></textarea>
+				<div id="code-editor-help" class="sr-only">
+					Enter JavaScript code that will be converted into a bookmarklet. The code will be validated in
+					real-time.
+				</div>
+				<div id="error-display" class="error-panel hidden" role="alert" aria-live="polite"></div>
 			</section>
 
-			<section class="name-section">
+			<section class="name-section" aria-labelledby="name-section-heading">
+				<h2 id="name-section-heading" class="sr-only">Bookmarklet Name</h2>
 				<label for="bookmarklet-name">Bookmarklet Name:</label>
-				<input type="text" id="bookmarklet-name" placeholder="Custom Bookmarklet">
+				<input type="text" id="bookmarklet-name" placeholder="Custom Bookmarklet"
+					aria-describedby="name-input-help" maxlength="100">
+				<div id="name-input-help" class="sr-only">
+					Enter a name for your bookmarklet. This will be displayed when you save it to your bookmarks.
+				</div>
 			</section>
 
-			<section class="output-section">
-				<h3>Generated Bookmarklet:</h3>
-				<div id="bookmarklet-output" class="output-display">
+			<section class="output-section" aria-labelledby="output-section-heading">
+				<h2 id="output-section-heading">Generated Bookmarklet:</h2>
+				<div id="bookmarklet-output" class="output-display" role="region" aria-live="polite"
+					aria-label="Generated bookmarklet result">
 					<p class="placeholder">Enter JavaScript code to generate a bookmarklet</p>
 				</div>
 			</section>
