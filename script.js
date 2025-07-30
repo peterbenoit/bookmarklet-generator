@@ -70,15 +70,19 @@ class BookmarkletApp {
 	}
 
 	handleNameChange(name) {
-		// Update bookmarklet display with new name
+		// Update bookmarklet display with new name in real-time
 		const code = this.codeEditor.getValue();
 		if (code.trim()) {
+			// Regenerate bookmarklet with new name
 			this.generateBookmarklet(code);
+		} else {
+			// Even without code, we can show the name change in the placeholder
+			this.showPlaceholder();
 		}
 	}
 
 	generateBookmarklet(code) {
-		const name = this.nameInput.getValue() || 'Custom Bookmarklet';
+		const name = this.nameInput.getEffectiveName();
 		const bookmarklet = this.bookmarkletGenerator.generate(code, name);
 
 		this.outputDisplay.updateBookmarklet(bookmarklet);
@@ -517,27 +521,199 @@ class CodeEditor {
 	}
 }
 
+/**
+ * NameInput class manages bookmarklet naming with real-time updates
+ * and provides default name fallback functionality
+ */
 class NameInput {
 	constructor(elementId) {
 		this.element = document.getElementById(elementId);
 		this.changeCallback = null;
+		this.defaultName = 'Custom Bookmarklet';
+
+		if (!this.element) {
+			throw new Error(`NameInput: Element with id '${elementId}' not found`);
+		}
+
+		this.init();
 	}
 
+	/**
+	 * Initialize the name input component
+	 */
+	init() {
+		this.setupEventListeners();
+		this.setPlaceholder(this.defaultName);
+	}
+
+	/**
+	 * Sets up event listeners for the name input
+	 */
+	setupEventListeners() {
+		// Input event for real-time updates
+		this.element.addEventListener('input', (e) => {
+			this.handleNameChange(e.target.value);
+		});
+
+		// Additional events for better UX
+		this.element.addEventListener('blur', (e) => {
+			this.handleNameBlur(e.target.value);
+		});
+
+		this.element.addEventListener('focus', (e) => {
+			this.handleNameFocus();
+		});
+	}
+
+	/**
+	 * Handles name input changes with real-time callback
+	 * @param {string} name - The current name value
+	 */
+	handleNameChange(name) {
+		if (this.changeCallback) {
+			// Always pass the effective name (with fallback) to the callback
+			const effectiveName = this.getEffectiveName(name);
+			this.changeCallback(effectiveName);
+		}
+	}
+
+	/**
+	 * Handles name input blur event
+	 * @param {string} name - The current name value
+	 */
+	handleNameBlur(name) {
+		// Trim whitespace on blur
+		const trimmedName = name.trim();
+		if (trimmedName !== name) {
+			this.element.value = trimmedName;
+			this.handleNameChange(trimmedName);
+		}
+	}
+
+	/**
+	 * Handles name input focus event
+	 */
+	handleNameFocus() {
+		// Select all text when focused for easy replacement
+		this.element.select();
+	}
+
+	/**
+	 * Gets the current name value from the input
+	 * @returns {string} - Current name value
+	 */
 	getValue() {
-		return this.element.value;
+		return this.element.value.trim();
 	}
 
+	/**
+	 * Gets the effective name with default fallback
+	 * @param {string} name - Optional name to check, uses current value if not provided
+	 * @returns {string} - Effective name with fallback applied
+	 */
+	getEffectiveName(name) {
+		const currentName = name !== undefined ? name : this.getValue();
+		return currentName.trim() || this.defaultName;
+	}
+
+	/**
+	 * Sets the name value
+	 * @param {string} name - Name to set
+	 */
 	setValue(name) {
-		this.element.value = name;
+		this.element.value = name || '';
+
+		// Trigger change event if there's a callback
+		if (this.changeCallback) {
+			this.handleNameChange(this.element.value);
+		}
 	}
 
+	/**
+	 * Sets the placeholder text for the input
+	 * @param {string} text - Placeholder text
+	 */
+	setPlaceholder(text) {
+		this.element.placeholder = text || this.defaultName;
+	}
+
+	/**
+	 * Registers a callback for name changes
+	 * @param {Function} callback - Callback function to call on name changes
+	 */
 	onNameChange(callback) {
 		this.changeCallback = callback;
-		this.element.addEventListener('input', (e) => {
-			if (this.changeCallback) {
-				this.changeCallback(e.target.value);
-			}
-		});
+	}
+
+	/**
+	 * Sets the default name fallback
+	 * @param {string} defaultName - Default name to use when input is empty
+	 */
+	setDefaultName(defaultName) {
+		this.defaultName = defaultName || 'Custom Bookmarklet';
+		this.setPlaceholder(this.defaultName);
+	}
+
+	/**
+	 * Gets the current default name
+	 * @returns {string} - Current default name
+	 */
+	getDefaultName() {
+		return this.defaultName;
+	}
+
+	/**
+	 * Clears the name input
+	 */
+	clear() {
+		this.setValue('');
+	}
+
+	/**
+	 * Sets focus to the name input
+	 */
+	focus() {
+		this.element.focus();
+	}
+
+	/**
+	 * Validates the name input
+	 * @param {string} name - Optional name to validate, uses current value if not provided
+	 * @returns {Object} - Validation result with isValid and message
+	 */
+	validateName(name) {
+		const currentName = name !== undefined ? name : this.getValue();
+		const effectiveName = this.getEffectiveName(currentName);
+
+		// Basic validation rules
+		if (effectiveName.length > 100) {
+			return {
+				isValid: false,
+				message: 'Bookmarklet name is too long (maximum 100 characters)'
+			};
+		}
+
+		// Check for potentially problematic characters in bookmarklet names
+		const problematicChars = /[<>'"&]/;
+		if (problematicChars.test(effectiveName)) {
+			return {
+				isValid: false,
+				message: 'Bookmarklet name contains characters that may cause issues'
+			};
+		}
+
+		return {
+			isValid: true,
+			message: null
+		};
+	}
+
+	/**
+	 * Destroys the name input and cleans up resources
+	 */
+	destroy() {
+		// Clean up references
+		this.changeCallback = null;
 	}
 }
 
