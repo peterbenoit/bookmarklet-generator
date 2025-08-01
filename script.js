@@ -31,7 +31,7 @@ class BookmarkletApp {
 		// Set up event handlers
 		this.setupEventHandlers();
 
-		console.log('Bookmarklet Generator initialized');
+
 	}
 
 	async initializeEditor() {
@@ -45,7 +45,7 @@ class BookmarkletApp {
 
 		try {
 			this.editor = CodeMirror(editorContainer, {
-				value: '// Enter your JavaScript code here\nalert("Hello from bookmarklet!");',
+				value: '// Enter your JavaScript code here',
 				mode: 'javascript',
 				theme: 'monokai',
 				lineNumbers: true,
@@ -76,7 +76,7 @@ class BookmarkletApp {
 				placeholder="Enter your JavaScript code here..."
 				style="width: 100%; height: 300px; font-family: monospace;"
 			>// Enter your JavaScript code here
-alert("Hello from bookmarklet!");</textarea>
+			</textarea>
 		`;
 
 		const textarea = document.getElementById('fallback-editor');
@@ -171,7 +171,7 @@ alert("Hello from bookmarklet!");</textarea>
 					<a href="${bookmarkletCode}"
 					   class="bookmarklet-link"
 					   draggable="true"
-					   style="display: inline-block; padding: 10px 15px; background: #007acc; color: white; text-decoration: none; border-radius: 5px;"
+					   style="display: inline-block; padding: 10px 15px; background: #007acc; color: white; text-decoration: none; border-radius: 5px; text-align: center; font-weight: bold;"
 					   title="Drag this to your bookmarks bar">${escapedName}</a>
 				</div>
 									<button class="copy-button"
@@ -183,10 +183,12 @@ alert("Hello from bookmarklet!");</textarea>
 				<div class="instructions" style="margin: 10px 0; padding: 10px; background: #e7f3ff; border-radius: 5px;">
 					<p><strong>To install:</strong> Drag the blue link above to your bookmarks bar, or right-click and "Add to bookmarks"</p>
 				</div>
-				<details class="code-details" style="margin-top: 15px;">
-					<summary style="cursor: pointer; padding: 5px; background: #f1f1f1; border-radius: 3px;">View generated code</summary>
-					<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; margin-top: 10px;"><code>${this.escapeHtml(displayCode)}</code></pre>
-				</details>
+				<button class="view-code-button"
+						type="button"
+						onclick="showCodeModal('${bookmarkletCode.replace(/'/g, "\\'")}')"
+						style="margin-top: 15px; padding: 10px 15px; background: #f1f1f1; color: #1d1d1f; border: 1px solid #d1d1d6; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s ease;">
+					View generated code
+				</button>
 			</div>
 		`;
 	}
@@ -224,10 +226,9 @@ alert("Hello from bookmarklet!");</textarea>
 
 // Global copy function for the copy button
 function copyToClipboard(text, buttonElement) {
-	console.log('Copying to clipboard:', text);
 	if (navigator.clipboard) {
 		navigator.clipboard.writeText(text).then(() => {
-			console.log('Copied to clipboard');
+
 			// Simple visual feedback
 			const button = buttonElement;
 			const originalText = button.textContent;
@@ -259,13 +260,76 @@ function fallbackCopyTextToClipboard(text) {
 
 	try {
 		document.execCommand('copy');
-		console.log('Fallback: Copied to clipboard');
+
 	} catch (err) {
 		console.error('Fallback: Could not copy text: ', err);
 	}
 
 	document.body.removeChild(textArea);
 }
+
+// Modal functionality
+function showCodeModal(code) {
+	const modal = document.getElementById('code-modal');
+	const codeContent = document.getElementById('modal-code-content');
+
+	if (modal && codeContent) {
+		// Set the code content
+		codeContent.querySelector('code').textContent = code;
+
+		// Show the modal
+		modal.classList.add('show');
+		modal.setAttribute('aria-hidden', 'false');
+
+		// Focus the close button for accessibility
+		const closeButton = modal.querySelector('.modal-close');
+		if (closeButton) {
+			closeButton.focus();
+		}
+
+		// Prevent body scrolling
+		document.body.style.overflow = 'hidden';
+	}
+}
+
+function hideCodeModal() {
+	const modal = document.getElementById('code-modal');
+
+	if (modal) {
+		modal.classList.remove('show');
+		modal.setAttribute('aria-hidden', 'true');
+
+		// Restore body scrolling
+		document.body.style.overflow = '';
+	}
+}
+
+// Set up modal event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', function () {
+	const modal = document.getElementById('code-modal');
+	const closeButton = modal?.querySelector('.modal-close');
+
+	// Close button click
+	if (closeButton) {
+		closeButton.addEventListener('click', hideCodeModal);
+	}
+
+	// Click outside modal to close
+	if (modal) {
+		modal.addEventListener('click', function (e) {
+			if (e.target === modal) {
+				hideCodeModal();
+			}
+		});
+	}
+
+	// Escape key to close
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape' && modal?.classList.contains('show')) {
+			hideCodeModal();
+		}
+	});
+});
 
 // Initialize the application
 new BookmarkletApp();

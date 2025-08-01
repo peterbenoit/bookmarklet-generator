@@ -46,6 +46,19 @@
 		</main>
 	</div>
 
+	<!-- Modal for viewing generated code -->
+	<div id="code-modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3 id="modal-title">Generated Bookmarklet Code</h3>
+				<button class="modal-close" aria-label="Close modal">&times;</button>
+			</div>
+			<div class="modal-body">
+				<pre id="modal-code-content"><code></code></pre>
+			</div>
+		</div>
+	</div>
+
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 	<script src="script.js"></script>
