@@ -36,6 +36,17 @@
 				</div>
 			</section>
 
+			<section class="libraries-section" aria-labelledby="libraries-section-heading">
+				<h2 id="libraries-section-heading" class="sr-only">External Libraries</h2>
+				<label for="bookmarklet-libraries">External Libraries (optional):</label>
+				<textarea id="bookmarklet-libraries"
+					placeholder="Enter library URLs, one per line&#10;https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js&#10;https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"
+					aria-describedby="libraries-input-help" rows="3"></textarea>
+				<div id="libraries-input-help" class="sr-only">
+					Enter URLs of external JavaScript libraries to load before your code executes. One URL per line.
+				</div>
+			</section>
+
 			<section class="output-section" aria-labelledby="output-section-heading">
 				<h2 id="output-section-heading">Generated Bookmarklet:</h2>
 				<div id="bookmarklet-output" class="output-display" role="region" aria-live="polite"

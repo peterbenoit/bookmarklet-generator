@@ -26,12 +26,11 @@ class BookmarkletApp {
 
 		// Initialize other UI components
 		this.nameInput = document.getElementById('bookmarklet-name');
+		this.librariesInput = document.getElementById('bookmarklet-libraries');
 		this.outputDisplay = document.getElementById('bookmarklet-output');
 
 		// Set up event handlers
 		this.setupEventHandlers();
-
-
 	}
 
 	async initializeEditor() {
@@ -98,6 +97,13 @@ class BookmarkletApp {
 				this.updateOutput();
 			});
 		}
+
+		// Libraries input change handler
+		if (this.librariesInput) {
+			this.librariesInput.addEventListener('input', () => {
+				this.updateOutput();
+			});
+		}
 	}
 
 	handleCodeChange(code) {
@@ -145,17 +151,68 @@ class BookmarkletApp {
 	}
 
 	generateBookmarklet(code) {
-		// Simple bookmarklet generation
-		// Remove comments and extra whitespace
+		// Get libraries from input
+		const librariesText = this.librariesInput?.value || '';
+		const libraries = librariesText
+			.split('\n')
+			.map(url => url.trim())
+			.filter(url => url && url.startsWith('http'));
+
+		// Clean the main code
 		const cleanCode = code
 			.replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
 			.replace(/\/\/.*$/gm, '') // Remove single-line comments
 			.replace(/\s+/g, ' ') // Replace multiple whitespace with single space
 			.trim();
 
-		// Wrap in IIFE and encode
-		const wrappedCode = `(function(){${cleanCode}})();`;
+		let wrappedCode;
+
+		if (libraries.length > 0) {
+			// Generate library loading code with modern approach
+			const libraryLoadingCode = this.generateLibraryLoader(libraries, cleanCode);
+			wrappedCode = `(function(){${libraryLoadingCode}})();`;
+		} else {
+			// Simple bookmarklet without libraries
+			wrappedCode = `(function(){${cleanCode}})();`;
+		}
+
 		return `javascript:${encodeURIComponent(wrappedCode)}`;
+	}
+
+	generateLibraryLoader(libraries, userCode) {
+		// Modern library loading approach using Promises
+		const libraryUrls = libraries.map(url => `"${url.replace(/"/g, '\\"')}"`).join(',');
+
+		return `
+			function loadScript(src) {
+				return new Promise((resolve, reject) => {
+					const script = document.createElement('script');
+					script.src = src;
+					script.onload = resolve;
+					script.onerror = reject;
+					document.head.appendChild(script);
+				});
+			}
+
+			function loadLibraries(urls) {
+				return Promise.all(urls.map(loadScript));
+			}
+
+			const libraries = [${libraryUrls}];
+
+			if (libraries.length > 0) {
+				loadLibraries(libraries)
+					.then(() => {
+						${userCode}
+					})
+					.catch(err => {
+						console.error('Failed to load libraries:', err);
+						alert('Failed to load one or more libraries. Check console for details.');
+					});
+			} else {
+				${userCode}
+			}
+		`.replace(/\s+/g, ' ').trim();
 	}
 
 	displayBookmarklet(name, bookmarkletCode) {
@@ -163,6 +220,22 @@ class BookmarkletApp {
 		const displayCode = bookmarkletCode.length > 200
 			? bookmarkletCode.substring(0, 200) + '...'
 			: bookmarkletCode;
+
+		// Get libraries info
+		const librariesText = this.librariesInput?.value || '';
+		const libraries = librariesText
+			.split('\n')
+			.map(url => url.trim())
+			.filter(url => url && url.startsWith('http'));
+
+		const librariesInfo = libraries.length > 0
+			? `<div class="libraries-info" style="margin: 10px 0; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
+				<p><strong>External Libraries (${libraries.length}):</strong></p>
+				<ul style="margin: 5px 0 0 20px; font-size: 0.9em;">
+					${libraries.map(url => `<li>${this.escapeHtml(url)}</li>`).join('')}
+				</ul>
+			</div>`
+			: '';
 
 		this.outputDisplay.innerHTML = `
 			<div class="bookmarklet-result">
@@ -174,14 +247,16 @@ class BookmarkletApp {
 					   style="display: inline-block; padding: 10px 15px; background: #007acc; color: white; text-decoration: none; border-radius: 5px; text-align: center; font-weight: bold;"
 					   title="Drag this to your bookmarks bar">${escapedName}</a>
 				</div>
-									<button class="copy-button"
-							type="button"
-							onclick="copyToClipboard('${bookmarkletCode.replace(/'/g, "\\'")}', this)"
-							style="padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
-						Copy Code
-					</button>
+				${librariesInfo}
+				<button class="copy-button"
+						type="button"
+						onclick="copyToClipboard('${bookmarkletCode.replace(/'/g, "\\'")}', this)"
+						style="padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+					Copy Code
+				</button>
 				<div class="instructions" style="margin: 10px 0; padding: 10px; background: #e7f3ff; border-radius: 5px;">
 					<p><strong>To install:</strong> Drag the blue link above to your bookmarks bar, or right-click and "Add to bookmarks"</p>
+					${libraries.length > 0 ? '<p><strong>Note:</strong> This bookmarklet will load external libraries before executing your code.</p>' : ''}
 				</div>
 				<button class="view-code-button"
 						type="button"

@@ -371,6 +371,49 @@ header p {
 	color: #86868b;
 }
 
+/* Libraries section */
+.libraries-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.libraries-section label {
+	font-weight: 600;
+	margin-bottom: 0.75rem;
+	color: #1d1d1f;
+	font-size: 1.1rem;
+	letter-spacing: -0.01em;
+}
+
+#bookmarklet-libraries {
+	padding: 1rem;
+	border: 2px solid #e5e5e7;
+	border-radius: 12px;
+	font-size: 14px;
+	font-weight: 400;
+	font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	background: #fafafa;
+	color: #1d1d1f;
+	resize: vertical;
+	min-height: 80px;
+	line-height: 1.5;
+}
+
+#bookmarklet-libraries:focus {
+	outline: none;
+	border-color: #007aff;
+	box-shadow:
+		0 0 0 4px rgba(0, 122, 255, 0.1),
+		0 4px 20px rgba(0, 122, 255, 0.15);
+	background: #ffffff;
+}
+
+#bookmarklet-libraries::placeholder {
+	color: #86868b;
+	font-family: inherit;
+}
+
 /* Output section */
 .output-section h2 {
 	color: #1d1d1f;
@@ -740,12 +783,12 @@ header p {
 @media (min-width: 768px) {
 	.app-layout {
 		grid-template-columns: 2fr 1fr;
-		grid-template-rows: auto auto;
+		grid-template-rows: auto auto auto;
 		gap: 2.5rem;
 	}
 
 	.code-section {
-		grid-row: 1 / 3;
+		grid-row: 1 / 4;
 	}
 
 	.name-section {
@@ -753,9 +796,14 @@ header p {
 		grid-row: 1;
 	}
 
-	.output-section {
+	.libraries-section {
 		grid-column: 2;
 		grid-row: 2;
+	}
+
+	.output-section {
+		grid-column: 2;
+		grid-row: 3;
 	}
 }
 
