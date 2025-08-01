@@ -891,22 +891,18 @@ class OutputDisplay {
 		const bookmarkletName = bookmarkletLink.getAttribute('data-bookmarklet-name') || this.currentBookmarklet.name;
 		bookmarkletLink.textContent = bookmarkletName;
 
-		// Handle drag start - keep it simple
+		// Handle drag start - keep it simple and clean
 		bookmarkletLink.addEventListener('dragstart', (e) => {
 			// Set drag effect
 			e.dataTransfer.effectAllowed = 'copy';
 
-			// Add visual feedback during drag
+			// Add subtle visual feedback during drag (just a class for CSS styling)
 			bookmarkletLink.classList.add('dragging');
-
-			// Show drag instructions
-			this.showDragFeedback();
 		});
 
 		// Handle drag end
 		bookmarkletLink.addEventListener('dragend', (e) => {
 			bookmarkletLink.classList.remove('dragging');
-			this.hideDragFeedback();
 		});
 
 		// Prevent default click behavior to avoid executing bookmarklet in the generator
