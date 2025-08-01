@@ -158,6 +158,10 @@ class BookmarkletApp {
 			.map(url => url.trim())
 			.filter(url => url && url.startsWith('http'));
 
+		// Separate JS and CSS libraries
+		const jsLibraries = libraries.filter(url => url.endsWith('.js') || (!url.endsWith('.css') && !url.includes('.css')));
+		const cssLibraries = libraries.filter(url => url.endsWith('.css') || url.includes('.css'));
+
 		// Clean the main code
 		const cleanCode = code
 			.replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
@@ -169,7 +173,7 @@ class BookmarkletApp {
 
 		if (libraries.length > 0) {
 			// Generate library loading code with modern approach
-			const libraryLoadingCode = this.generateLibraryLoader(libraries, cleanCode);
+			const libraryLoadingCode = this.generateLibraryLoader(jsLibraries, cssLibraries, cleanCode);
 			wrappedCode = `(function(){${libraryLoadingCode}})();`;
 		} else {
 			// Simple bookmarklet without libraries
@@ -179,9 +183,10 @@ class BookmarkletApp {
 		return `javascript:${encodeURIComponent(wrappedCode)}`;
 	}
 
-	generateLibraryLoader(libraries, userCode) {
+	generateLibraryLoader(jsLibraries, cssLibraries, userCode) {
 		// Modern library loading approach using Promises
-		const libraryUrls = libraries.map(url => `"${url.replace(/"/g, '\\"')}"`).join(',');
+		const jsUrls = jsLibraries.map(url => `"${url.replace(/"/g, '\\"')}"`).join(',');
+		const cssUrls = cssLibraries.map(url => `"${url.replace(/"/g, '\\"')}"`).join(',');
 
 		return `
 			function loadScript(src) {
@@ -194,14 +199,33 @@ class BookmarkletApp {
 				});
 			}
 
-			function loadLibraries(urls) {
-				return Promise.all(urls.map(loadScript));
+			function loadCSS(href) {
+				return new Promise((resolve, reject) => {
+					const link = document.createElement('link');
+					link.rel = 'stylesheet';
+					link.href = href;
+					link.onload = resolve;
+					link.onerror = reject;
+					document.head.appendChild(link);
+				});
 			}
 
-			const libraries = [${libraryUrls}];
+			function loadLibraries(jsUrls, cssUrls) {
+				const promises = [];
+				if (jsUrls.length > 0) {
+					promises.push(...jsUrls.map(loadScript));
+				}
+				if (cssUrls.length > 0) {
+					promises.push(...cssUrls.map(loadCSS));
+				}
+				return Promise.all(promises);
+			}
 
-			if (libraries.length > 0) {
-				loadLibraries(libraries)
+			const jsLibraries = [${jsUrls}];
+			const cssLibraries = [${cssUrls}];
+
+			if (jsLibraries.length > 0 || cssLibraries.length > 0) {
+				loadLibraries(jsLibraries, cssLibraries)
 					.then(() => {
 						${userCode}
 					})
