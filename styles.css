@@ -148,6 +148,11 @@ header p {
 	color: white;
 }
 
+.error-type-comment {
+	background-color: #f59e0b;
+	color: white;
+}
+
 /* Error message */
 .error-message {
 	font-weight: 500;
@@ -220,6 +225,19 @@ header p {
 	min-height: 120px;
 	transition: all 0.3s ease;
 	position: relative;
+}
+
+/* Ensure dragging works within output display */
+.output-display * {
+	-webkit-user-drag: auto;
+}
+
+.output-display .bookmarklet-link {
+	-webkit-user-drag: element !important;
+	-khtml-user-drag: element !important;
+	-moz-user-drag: element !important;
+	-o-user-drag: element !important;
+	user-drag: element !important;
 }
 
 .output-display.has-content {
@@ -354,9 +372,15 @@ header p {
 	cursor: move;
 	border: 2px solid transparent;
 	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-	user-select: none;
+	-webkit-user-drag: element;
+	-khtml-user-drag: element;
+	-moz-user-drag: element;
+	-o-user-drag: element;
+	user-drag: element;
 	position: relative;
 	overflow: hidden;
+	/* Override any parent container restrictions */
+	z-index: 20;
 }
 
 .bookmarklet-link:hover {

@@ -799,16 +799,13 @@ class OutputDisplay {
 					   class="bookmarklet-link"
 					   draggable="true"
 					   title="Drag this to your bookmarks bar or right-click to copy"
-					   data-bookmarklet-name="${escapedName}">
-						📖 ${escapedName}
-					</a>
+					   data-bookmarklet-name="${escapedName}">${escapedName}</a>
 				</div>
 
 				<div class="bookmarklet-instructions">
 					<p><strong>How to use:</strong></p>
 					<ul>
-						<li>Drag the link above to your bookmarks bar</li>
-						<li>Or right-click and select "Bookmark this link"</li>
+						<li>Drag the button above to your bookmarks bar</li>
 						<li>Click the bookmark on any webpage to run your code</li>
 					</ul>
 				</div>
@@ -886,11 +883,18 @@ class OutputDisplay {
 		const bookmarkletLink = this.element.querySelector('.bookmarklet-link');
 		if (!bookmarkletLink) return;
 
+		// Ensure the element is draggable
+		bookmarkletLink.draggable = true;
+
 		// Handle drag start
 		bookmarkletLink.addEventListener('dragstart', (e) => {
+			console.log('Drag started!'); // Debug log
+
 			// Set the drag data for the bookmarklet
-			const bookmarkletName = bookmarkletLink.getAttribute('data-bookmarklet-name');
+			const bookmarkletName = bookmarkletLink.dataset.bookmarkletName; //bookmarkletLink.getAttribute('data-bookmarklet-name');
 			const bookmarkletUrl = bookmarkletLink.href;
+
+			console.log('Dragging:', bookmarkletName, bookmarkletUrl); // Debug log
 
 			// Set drag data in multiple formats for better compatibility
 			e.dataTransfer.setData('text/uri-list', bookmarkletUrl);
@@ -899,6 +903,8 @@ class OutputDisplay {
 
 			// Set drag effect
 			e.dataTransfer.effectAllowed = 'copy';
+
+			console.log(e.dataTransfer)
 
 			// Add visual feedback during drag
 			bookmarkletLink.classList.add('dragging');
@@ -909,24 +915,28 @@ class OutputDisplay {
 
 		// Handle drag end
 		bookmarkletLink.addEventListener('dragend', (e) => {
+			// console.log('Drag ended!'); // Debug log
 			bookmarkletLink.classList.remove('dragging');
 			this.hideDragFeedback();
 		});
 
-		// Prevent default click behavior when dragging
-		bookmarkletLink.addEventListener('click', (e) => {
-			// Only prevent default if this is likely a drag operation
-			// (user clicked and held for a short time)
-			if (bookmarkletLink.classList.contains('dragging')) {
-				e.preventDefault();
-			}
-		});
+		// // Add mousedown event to help with drag detection
+		// bookmarkletLink.addEventListener('mousedown', (e) => {
+		// 	console.log('Mouse down on bookmarklet link'); // Debug log
+		// });
 
-		// Add context menu support for copying
-		bookmarkletLink.addEventListener('contextmenu', (e) => {
-			// Let the browser handle the context menu
-			// Users can right-click to bookmark or copy link
-		});
+		// // Prevent default click behavior to avoid executing bookmarklet in the generator
+		// bookmarkletLink.addEventListener('click', (e) => {
+		// 	e.preventDefault();
+		// 	// Show a helpful message instead
+		// 	console.log('Drag this link to your bookmarks bar to save it as a bookmarklet');
+		// });
+
+		// // Add context menu support for copying
+		// bookmarkletLink.addEventListener('contextmenu', (e) => {
+		// 	// Let the browser handle the context menu
+		// 	// Users can right-click to bookmark or copy link
+		// });
 	}
 
 	/**
@@ -1110,20 +1120,118 @@ class ValidationEngine {
 		const errors = [];
 		let isValid = true;
 
-		try {
-			// Wrap code in an immediately invoked function expression
-			// This allows for statements and declarations that wouldn't be valid in Function constructor
-			const wrappedCode = `(function() { ${code} })`;
-
-			// Use Function constructor to check syntax
-			new Function(wrappedCode);
-		} catch (error) {
+		// Check for comments first - they make bookmarklets unnecessarily long
+		const commentCheck = this.checkForComments(code);
+		if (commentCheck.hasComments) {
 			isValid = false;
-			const parsedError = this.parseError(error, code);
-			errors.push(parsedError);
+			errors.push({
+				message: 'Comments detected in code. Remove comments to generate bookmarklet - they add unnecessary length.',
+				type: 'comment',
+				line: commentCheck.firstCommentLine,
+				column: null,
+				context: commentCheck.firstCommentContext
+			});
+		}
+
+		// Only check syntax if no comments (to avoid confusing users with multiple errors)
+		if (!commentCheck.hasComments) {
+			try {
+				// Wrap code in an immediately invoked function expression
+				// This allows for statements and declarations that wouldn't be valid in Function constructor
+				const wrappedCode = `(function() { ${code} })`;
+
+				// Use Function constructor to check syntax
+				new Function(wrappedCode);
+			} catch (error) {
+				isValid = false;
+				const parsedError = this.parseError(error, code);
+				errors.push(parsedError);
+			}
 		}
 
 		return { isValid, errors };
+	}
+
+	/**
+	 * Checks for JavaScript comments in the code
+	 * @param {string} code - JavaScript code to check
+	 * @returns {Object} - {hasComments: boolean, firstCommentLine: number, firstCommentContext: string}
+	 */
+	checkForComments(code) {
+		const lines = code.split('\n');
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			const trimmedLine = line.trim();
+
+			// Check for single-line comments (//)
+			const singleLineComment = line.indexOf('//');
+			if (singleLineComment !== -1) {
+				// Make sure it's not inside a string
+				const beforeComment = line.substring(0, singleLineComment);
+				if (!this.isInsideString(beforeComment)) {
+					return {
+						hasComments: true,
+						firstCommentLine: i + 1,
+						firstCommentContext: trimmedLine
+					};
+				}
+			}
+
+			// Check for multi-line comment start (/* )
+			const multiLineStart = line.indexOf('/*');
+			if (multiLineStart !== -1) {
+				// Make sure it's not inside a string
+				const beforeComment = line.substring(0, multiLineStart);
+				if (!this.isInsideString(beforeComment)) {
+					return {
+						hasComments: true,
+						firstCommentLine: i + 1,
+						firstCommentContext: trimmedLine
+					};
+				}
+			}
+		}
+
+		return {
+			hasComments: false,
+			firstCommentLine: null,
+			firstCommentContext: null
+		};
+	}
+
+	/**
+	 * Simple check to see if we're inside a string (to avoid false positives)
+	 * @param {string} codeBefore - Code before the potential comment
+	 * @returns {boolean} - True if likely inside a string
+	 */
+	isInsideString(codeBefore) {
+		// Count unescaped quotes
+		let singleQuotes = 0;
+		let doubleQuotes = 0;
+		let inSingleQuote = false;
+		let inDoubleQuote = false;
+
+		for (let i = 0; i < codeBefore.length; i++) {
+			const char = codeBefore[i];
+			const prevChar = i > 0 ? codeBefore[i - 1] : '';
+
+			// Skip escaped quotes
+			if (prevChar === '\\') {
+				continue;
+			}
+
+			if (char === '"' && !inSingleQuote) {
+				inDoubleQuote = !inDoubleQuote;
+				if (inDoubleQuote) doubleQuotes++;
+			} else if (char === "'" && !inDoubleQuote) {
+				inSingleQuote = !inSingleQuote;
+				if (inSingleQuote) singleQuotes++;
+			}
+		}
+
+		// If we're inside quotes, return true
+		return inSingleQuote || inDoubleQuote;
 	}
 
 	/**
