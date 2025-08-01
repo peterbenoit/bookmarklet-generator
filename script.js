@@ -886,25 +886,15 @@ class OutputDisplay {
 		// Ensure the element is draggable
 		bookmarkletLink.draggable = true;
 
-		// Handle drag start
+		// The key fix: Make sure the textContent matches the desired bookmark name
+		// This is what browsers actually use for the bookmark title
+		const bookmarkletName = bookmarkletLink.getAttribute('data-bookmarklet-name') || this.currentBookmarklet.name;
+		bookmarkletLink.textContent = bookmarkletName;
+
+		// Handle drag start - keep it simple
 		bookmarkletLink.addEventListener('dragstart', (e) => {
-			console.log('Drag started!'); // Debug log
-
-			// Set the drag data for the bookmarklet
-			const bookmarkletName = bookmarkletLink.dataset.bookmarkletName; //bookmarkletLink.getAttribute('data-bookmarklet-name');
-			const bookmarkletUrl = bookmarkletLink.href;
-
-			console.log('Dragging:', bookmarkletName, bookmarkletUrl); // Debug log
-
-			// Set drag data in multiple formats for better compatibility
-			e.dataTransfer.setData('text/uri-list', bookmarkletUrl);
-			e.dataTransfer.setData('text/plain', bookmarkletUrl);
-			e.dataTransfer.setData('text/html', `<a href="${bookmarkletUrl}">${bookmarkletName}</a>`);
-
 			// Set drag effect
 			e.dataTransfer.effectAllowed = 'copy';
-
-			console.log(e.dataTransfer)
 
 			// Add visual feedback during drag
 			bookmarkletLink.classList.add('dragging');
@@ -915,28 +905,16 @@ class OutputDisplay {
 
 		// Handle drag end
 		bookmarkletLink.addEventListener('dragend', (e) => {
-			// console.log('Drag ended!'); // Debug log
 			bookmarkletLink.classList.remove('dragging');
 			this.hideDragFeedback();
 		});
 
-		// // Add mousedown event to help with drag detection
-		// bookmarkletLink.addEventListener('mousedown', (e) => {
-		// 	console.log('Mouse down on bookmarklet link'); // Debug log
-		// });
-
-		// // Prevent default click behavior to avoid executing bookmarklet in the generator
-		// bookmarkletLink.addEventListener('click', (e) => {
-		// 	e.preventDefault();
-		// 	// Show a helpful message instead
-		// 	console.log('Drag this link to your bookmarks bar to save it as a bookmarklet');
-		// });
-
-		// // Add context menu support for copying
-		// bookmarkletLink.addEventListener('contextmenu', (e) => {
-		// 	// Let the browser handle the context menu
-		// 	// Users can right-click to bookmark or copy link
-		// });
+		// Prevent default click behavior to avoid executing bookmarklet in the generator
+		bookmarkletLink.addEventListener('click', (e) => {
+			e.preventDefault();
+			// Show a helpful message instead
+			console.log('Drag this link to your bookmarks bar to save it as a bookmarklet');
+		});
 	}
 
 	/**
