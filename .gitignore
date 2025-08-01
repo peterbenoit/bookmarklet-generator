@@ -55,3 +55,4 @@ temp/
 
 # other
 package-lock.json
+.git-credentials
