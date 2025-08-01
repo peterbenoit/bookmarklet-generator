@@ -6,6 +6,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Bookmarklet Generator</title>
 	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
 </head>
 
 <body>
@@ -20,12 +22,7 @@
 			<section class="code-section" aria-labelledby="code-section-heading">
 				<h2 id="code-section-heading" class="sr-only">JavaScript Code Editor</h2>
 				<label for="code-editor">JavaScript Code:</label>
-				<textarea id="code-editor" placeholder="Enter your JavaScript code here..."
-					aria-describedby="code-editor-help error-display" spellcheck="false" autocomplete="off"></textarea>
-				<div id="code-editor-help" class="sr-only">
-					Enter JavaScript code that will be converted into a bookmarklet. The code will be validated in
-					real-time.
-				</div>
+				<div id="code-editor"></div>
 				<div id="error-display" class="error-panel hidden" role="alert" aria-live="polite"></div>
 			</section>
 
@@ -49,6 +46,8 @@
 		</main>
 	</div>
 
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 	<script src="script.js"></script>
 </body>
 

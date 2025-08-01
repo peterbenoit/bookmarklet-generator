@@ -35,59 +35,70 @@ class BookmarkletApp {
 	}
 
 	async initializeEditor() {
-		const editorContainer = document.getElementById('code-editor');
+		// Wait for CodeMirror modules to load
+		let attempts = 0;
+		while (!window.CodeMirror && attempts < 50) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			attempts++;
+		}
 
 		if (!window.CodeMirror) {
-			console.error('CodeMirror not loaded, using fallback');
-			this.createFallbackEditor();
+			console.error('CodeMirror failed to load');
 			return;
 		}
 
 		try {
-			this.editor = CodeMirror(editorContainer, {
-				value: '// Enter your JavaScript code here\nalert("Hello from bookmarklet!");',
-				mode: 'javascript',
-				theme: 'monokai',
-				lineNumbers: true,
-				autoCloseBrackets: true,
-				matchBrackets: true,
-				indentUnit: 2,
-				tabSize: 2,
-				lineWrapping: true,
-				extraKeys: {
-					"Ctrl-Space": "autocomplete"
+			const { EditorView, basicSetup } = window.CodeMirror;
+			const { javascript } = window.CodeMirrorLangJavaScript || {};
+			
+			const extensions = [basicSetup];
+			
+			// Add JavaScript language support if available
+			if (javascript) {
+				extensions.push(javascript());
+			}
+
+			// Add update listener
+			extensions.push(EditorView.updateListener.of((update) => {
+				if (update.docChanged) {
+					this.handleCodeChange(this.editor.state.doc.toString());
 				}
-			});
+			}));
 
-			// Listen for changes
-			this.editor.on('change', (instance) => {
-				this.handleCodeChange(instance.getValue());
+			this.editor = new EditorView({
+				doc: '// Enter your JavaScript code here\nalert("Hello from bookmarklet!");',
+				extensions,
+				parent: document.getElementById('code-editor')
 			});
-
 		} catch (error) {
 			console.error('Failed to initialize CodeMirror:', error);
+			// Fallback to textarea
 			this.createFallbackEditor();
 		}
-	} createFallbackEditor() {
+	}
+
+	createFallbackEditor() {
 		const container = document.getElementById('code-editor');
 		container.innerHTML = `
-			<textarea
-				id="fallback-editor"
-				placeholder="Enter your JavaScript code here..."
+			<textarea 
+				id="fallback-editor" 
+				placeholder="Enter your JavaScript code here..." 
 				style="width: 100%; height: 300px; font-family: monospace;"
 			>// Enter your JavaScript code here
 alert("Hello from bookmarklet!");</textarea>
 		`;
-
+		
 		const textarea = document.getElementById('fallback-editor');
 		textarea.addEventListener('input', (e) => {
 			this.handleCodeChange(e.target.value);
 		});
 
-		// Create a simple interface for getting the value
 		this.editor = {
-			getValue: () => textarea.value,
-			setValue: (val) => { textarea.value = val; }
+			state: {
+				doc: {
+					toString: () => textarea.value
+				}
+			}
 		};
 	}
 
@@ -128,7 +139,7 @@ alert("Hello from bookmarklet!");</textarea>
 	}
 
 	updateOutput() {
-		const code = this.editor ? this.editor.getValue() : '';
+		const code = this.editor ? this.editor.state.doc.toString() : '';
 		const name = this.nameInput?.value || 'Custom Bookmarklet';
 
 		if (!code.trim()) {
@@ -160,32 +171,25 @@ alert("Hello from bookmarklet!");</textarea>
 
 	displayBookmarklet(name, bookmarkletCode) {
 		const escapedName = this.escapeHtml(name);
-		const displayCode = bookmarkletCode.length > 200
-			? bookmarkletCode.substring(0, 200) + '...'
+		const displayCode = bookmarkletCode.length > 100 
+			? bookmarkletCode.substring(0, 100) + '...' 
 			: bookmarkletCode;
 
 		this.outputDisplay.innerHTML = `
 			<div class="bookmarklet-result">
 				<h3>Ready to use:</h3>
-				<div class="bookmarklet-container" style="margin: 15px 0; padding: 15px; border: 2px dashed #007acc; border-radius: 8px; background: #f8f9fa;">
-					<a href="${bookmarkletCode}"
-					   class="bookmarklet-link"
-					   draggable="true"
-					   style="display: inline-block; padding: 10px 15px; background: #007acc; color: white; text-decoration: none; border-radius: 5px;"
-					   title="Drag this to your bookmarks bar">${escapedName}</a>
-				</div>
-									<button class="copy-button"
-							type="button"
-							onclick="copyToClipboard('${bookmarkletCode.replace(/'/g, "\\'")}', this)"
-							style="padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+				<div class="bookmarklet-container">
+					<a href="${bookmarkletCode}" class="bookmarklet-link" draggable="true">${escapedName}</a>
+					<button class="copy-button" type="button" onclick="copyToClipboard('${bookmarkletCode.replace(/'/g, "\\'")}')">
 						Copy Code
 					</button>
-				<div class="instructions" style="margin: 10px 0; padding: 10px; background: #e7f3ff; border-radius: 5px;">
-					<p><strong>To install:</strong> Drag the blue link above to your bookmarks bar, or right-click and "Add to bookmarks"</p>
 				</div>
-				<details class="code-details" style="margin-top: 15px;">
-					<summary style="cursor: pointer; padding: 5px; background: #f1f1f1; border-radius: 3px;">View generated code</summary>
-					<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; margin-top: 10px;"><code>${this.escapeHtml(displayCode)}</code></pre>
+				<div class="instructions">
+					<p><strong>To install:</strong> Drag the link above to your bookmarks bar, or right-click and "Add to bookmarks"</p>
+				</div>
+				<details class="code-details">
+					<summary>View generated code</summary>
+					<pre><code>${this.escapeHtml(displayCode)}</code></pre>
 				</details>
 			</div>
 		`;
@@ -199,7 +203,7 @@ alert("Hello from bookmarklet!");</textarea>
 		const errorDisplay = document.getElementById('error-display');
 		if (!errorDisplay) return;
 
-		const errorHtml = errors.map(error =>
+		const errorHtml = errors.map(error => 
 			`<div class="error-item">${this.escapeHtml(error.message)}</div>`
 		).join('');
 
@@ -223,20 +227,11 @@ alert("Hello from bookmarklet!");</textarea>
 }
 
 // Global copy function for the copy button
-function copyToClipboard(text, buttonElement) {
-	console.log('Copying to clipboard:', text);
+function copyToClipboard(text) {
 	if (navigator.clipboard) {
 		navigator.clipboard.writeText(text).then(() => {
 			console.log('Copied to clipboard');
-			// Simple visual feedback
-			const button = buttonElement;
-			const originalText = button.textContent;
-			button.textContent = 'Copied!';
-			button.style.background = '#218838';
-			setTimeout(() => {
-				button.textContent = originalText;
-				button.style.background = '#28a745';
-			}, 1500);
+			// You could add a visual feedback here
 		}).catch(err => {
 			console.error('Failed to copy: ', err);
 			fallbackCopyTextToClipboard(text);
