@@ -25,36 +25,37 @@
 				<div id="code-editor"></div>
 				<div id="error-display" class="error-panel hidden" role="alert" aria-live="polite"></div>
 			</section>
+			<aside class="controls-section">
+				<section class="name-section" aria-labelledby="name-section-heading">
+					<h2 id="name-section-heading" class="sr-only">Bookmarklet Name</h2>
+					<label for="bookmarklet-name">Bookmarklet Name:</label>
+					<input type="text" id="bookmarklet-name" placeholder="Custom Bookmarklet"
+						aria-describedby="name-input-help" maxlength="100">
+					<div id="name-input-help" class="sr-only">
+						Enter a name for your bookmarklet. This will be displayed when you save it to your bookmarks.
+					</div>
+				</section>
 
-			<section class="name-section" aria-labelledby="name-section-heading">
-				<h2 id="name-section-heading" class="sr-only">Bookmarklet Name</h2>
-				<label for="bookmarklet-name">Bookmarklet Name:</label>
-				<input type="text" id="bookmarklet-name" placeholder="Custom Bookmarklet"
-					aria-describedby="name-input-help" maxlength="100">
-				<div id="name-input-help" class="sr-only">
-					Enter a name for your bookmarklet. This will be displayed when you save it to your bookmarks.
-				</div>
-			</section>
+				<section class="libraries-section" aria-labelledby="libraries-section-heading">
+					<h2 id="libraries-section-heading" class="sr-only">External Libraries</h2>
+					<label for="bookmarklet-libraries">External Libraries (optional):</label>
+					<textarea id="bookmarklet-libraries" placeholder="Enter library URLs, one per line
+(JS and CSS supported)" aria-describedby="libraries-input-help" rows="4"></textarea>
+					<div id="libraries-input-help" class="sr-only">
+						Enter URLs of external JavaScript and CSS libraries to load before your code executes. One URL
+						per
+						line.
+					</div>
+				</section>
 
-			<section class="libraries-section" aria-labelledby="libraries-section-heading">
-				<h2 id="libraries-section-heading" class="sr-only">External Libraries</h2>
-				<label for="bookmarklet-libraries">External Libraries (optional):</label>
-				<textarea id="bookmarklet-libraries"
-					placeholder="Enter library URLs, one per line (JS and CSS supported)&#10;https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js&#10;https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css&#10;https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"
-					aria-describedby="libraries-input-help" rows="4"></textarea>
-				<div id="libraries-input-help" class="sr-only">
-					Enter URLs of external JavaScript and CSS libraries to load before your code executes. One URL per
-					line.
-				</div>
-			</section>
-
-			<section class="output-section" aria-labelledby="output-section-heading">
-				<h2 id="output-section-heading">Generated Bookmarklet:</h2>
-				<div id="bookmarklet-output" class="output-display" role="region" aria-live="polite"
-					aria-label="Generated bookmarklet result">
-					<p class="placeholder">Enter JavaScript code to generate a bookmarklet</p>
-				</div>
-			</section>
+				<section class="output-section" aria-labelledby="output-section-heading">
+					<h2 id="output-section-heading">Generated Bookmarklet:</h2>
+					<div id="bookmarklet-output" class="output-display" role="region" aria-live="polite"
+						aria-label="Generated bookmarklet result">
+						<p class="placeholder">Enter JavaScript code to generate a bookmarklet</p>
+					</div>
+				</section>
+			</aside>
 		</main>
 	</div>
 
