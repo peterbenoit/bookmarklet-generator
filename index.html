@@ -15,8 +15,67 @@
 	<div class="container">
 		<header>
 			<h1>Bookmarklet Generator</h1>
-			<p>Create custom bookmarklets from JavaScript code</p>
+			<p>Transform your JavaScript code into powerful browser bookmarks</p>
+			<div class="header-info">
+				<p class="description">
+					Create custom bookmarklets that can modify webpages, extract data, automate tasks, and add new
+					functionality to any website.
+					Simply write JavaScript code, and we'll generate a draggable bookmark for you.
+				</p>
+				<div class="quick-links">
+					<a href="https://github.com/peterbenoit/bookmarklet-generator" target="_blank" rel="noopener"
+						class="github-link">
+						📚 View on GitHub
+					</a>
+					<button type="button" class="help-toggle" onclick="toggleHelp()" aria-expanded="false"
+						aria-controls="help-section">
+						❓ How to Use
+					</button>
+				</div>
+			</div>
 		</header>
+
+		<section id="help-section" class="help-section hidden" aria-labelledby="help-heading">
+			<h2 id="help-heading">How to Create and Use Bookmarklets</h2>
+			<div class="help-content">
+				<div class="help-step">
+					<h3>1. Write Your Code</h3>
+					<p>Enter JavaScript code in the editor below. Your code will run on any webpage when the bookmarklet
+						is clicked.</p>
+				</div>
+				<div class="help-step">
+					<h3>2. Add Libraries (Optional)</h3>
+					<p>Include external JavaScript or CSS libraries like jQuery, Lodash, or custom stylesheets. Enter
+						one URL per line.</p>
+				</div>
+				<div class="help-step">
+					<h3>3. Name Your Bookmarklet</h3>
+					<p>Give your bookmarklet a descriptive name that will appear in your bookmarks bar.</p>
+				</div>
+				<div class="help-step">
+					<h3>4. Install the Bookmarklet</h3>
+					<p>Drag the generated blue link to your bookmarks bar, or right-click and select "Add to bookmarks".
+					</p>
+				</div>
+				<div class="help-step">
+					<h3>5. Use It Anywhere</h3>
+					<p>Click your bookmarklet on any webpage to execute your JavaScript code!</p>
+				</div>
+			</div>
+			<div class="example-section">
+				<h3>Example Ideas</h3>
+				<ul class="example-list">
+					<li><strong>Highlight Links:</strong> Make all links on a page stand out with colored backgrounds
+					</li>
+					<li><strong>Extract Data:</strong> Collect email addresses, phone numbers, or other information from
+						pages</li>
+					<li><strong>Dark Mode:</strong> Toggle dark mode on any website</li>
+					<li><strong>Word Count:</strong> Count words and characters on any page</li>
+					<li><strong>Remove Ads:</strong> Hide advertisements and distracting elements</li>
+					<li><strong>Auto-fill Forms:</strong> Quickly fill out repetitive forms</li>
+				</ul>
+			</div>
+		</section>
 
 		<main id="main-content" class="app-layout">
 			<section class="code-section" aria-labelledby="code-section-heading">

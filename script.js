@@ -430,5 +430,25 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 });
 
+// Help toggle functionality
+function toggleHelp() {
+	const helpSection = document.getElementById('help-section');
+	const helpToggle = document.querySelector('.help-toggle');
+
+	if (helpSection && helpToggle) {
+		const isHidden = helpSection.classList.contains('hidden');
+
+		if (isHidden) {
+			helpSection.classList.remove('hidden');
+			helpToggle.setAttribute('aria-expanded', 'true');
+			helpToggle.textContent = '❌ Close Help';
+		} else {
+			helpSection.classList.add('hidden');
+			helpToggle.setAttribute('aria-expanded', 'false');
+			helpToggle.textContent = '❓ How to Use';
+		}
+	}
+}
+
 // Initialize the application
 new BookmarkletApp();
